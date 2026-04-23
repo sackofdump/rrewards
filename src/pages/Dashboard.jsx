@@ -93,7 +93,7 @@ function ActivePromo() {
   if (!promo) return null;
   const restaurant = restaurants.find(r => r.id === promo.restaurantId);
   return (
-    <Link to="/promos" className={`block relative overflow-hidden rounded-2xl p-5 bg-gradient-to-r ${promo.color} mb-6`}>
+    <Link to="/restaurants" className={`block relative overflow-hidden rounded-2xl p-5 bg-gradient-to-r ${promo.color} mb-6`}>
       <div className="absolute inset-0 opacity-30"
         style={{ background: 'radial-gradient(ellipse at 0% 50%, rgba(255,255,255,0.15) 0%, transparent 60%)' }} />
       <div className="relative z-10 flex items-center justify-between">

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, Utensils, Shield, ChevronRight } from 'lucide-react';
+import { User, Utensils, Shield, ChevronRight, Terminal } from 'lucide-react';
 
 const DEMO_LOGINS = [
   {
@@ -92,6 +92,13 @@ export default function Login() {
               </button>
             );
           })}
+        </div>
+
+        <div className="mt-10 text-center">
+          <Link to="/dev-login"
+            className="inline-flex items-center gap-1.5 text-[11px] text-neutral-700 hover:text-violet-400 transition-colors">
+            <Terminal size={10} /> Dev access
+          </Link>
         </div>
       </div>
     </div>

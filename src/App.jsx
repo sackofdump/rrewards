@@ -11,6 +11,8 @@ import Profile from './pages/Profile';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import CustomerDetail from './pages/admin/CustomerDetail';
 import MenuManagement from './pages/admin/MenuManagement';
+import DevLogin from './pages/dev/DevLogin';
+import DevAdmin from './pages/dev/DevAdmin';
 import StaffScanner from './pages/staff/StaffScanner';
 
 function MobileShell({ children }) {
@@ -70,6 +72,20 @@ function StaffApp() {
   );
 }
 
+function DevAdminApp() {
+  return (
+    <ProtectedRoute role="devadmin">
+      <MobileShell>
+        <div className="flex-1">
+          <Routes>
+            <Route path="/dev-admin" element={<DevAdmin />} />
+          </Routes>
+        </div>
+      </MobileShell>
+    </ProtectedRoute>
+  );
+}
+
 function AppRouter() {
   const { pathname } = useLocation();
   if (pathname === '/login') return (
@@ -77,8 +93,14 @@ function AppRouter() {
       <Routes><Route path="/login" element={<Login />} /></Routes>
     </MobileShell>
   );
-  if (pathname.startsWith('/admin')) return <AdminApp />;
-  if (pathname.startsWith('/staff')) return <StaffApp />;
+  if (pathname === '/dev-login') return (
+    <MobileShell>
+      <Routes><Route path="/dev-login" element={<DevLogin />} /></Routes>
+    </MobileShell>
+  );
+  if (pathname.startsWith('/admin'))     return <AdminApp />;
+  if (pathname.startsWith('/staff'))     return <StaffApp />;
+  if (pathname.startsWith('/dev-admin')) return <DevAdminApp />;
   return <CustomerApp />;
 }
 

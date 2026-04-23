@@ -1,5 +1,5 @@
 import { createContext, useContext, useState } from 'react';
-import { adminCustomers, staffAccounts, adminAccount } from '../data/mockData';
+import { adminCustomers, staffAccounts, adminAccount, devAdminAccount } from '../data/mockData';
 
 const AuthContext = createContext(null);
 
@@ -45,6 +45,12 @@ export function AuthProvider({ children }) {
             setLoading(false); reject(); return;
           }
           found = { ...adminAccount };
+        } else if (role === 'devadmin') {
+          if (password !== devAdminAccount.password) {
+            setError('Invalid password.');
+            setLoading(false); reject(); return;
+          }
+          found = { ...devAdminAccount };
         }
 
         setUser(found);

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { adminCustomers, restaurants, tierConfig, REWARDS_RATE } from '../../data/mockData';
-import { Search, Users, TrendingUp, DollarSign, ChevronRight, Shield, UtensilsCrossed } from 'lucide-react';
+import { useMenuStore } from '../../hooks/useMenuStore';
+import { Search, Users, TrendingUp, DollarSign, ChevronRight, Shield, UtensilsCrossed, Download } from 'lucide-react';
 
 function StatCard({ icon: Icon, label, value, sub }) {
   return (
@@ -45,6 +46,19 @@ function CustomerRow({ customer }) {
 
 export default function AdminDashboard() {
   const [search, setSearch] = useState('');
+  const { items: menuItems } = useMenuStore();
+
+  const [downloading, setDownloading] = useState(false);
+
+  async function handleDownload() {
+    setDownloading(true);
+    try {
+      const { generateReport } = await import('../../utils/generateReport');
+      generateReport(menuItems);
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   const totalBalance = adminCustomers.reduce((s, c) => s + c.rewardsBalance, 0);
   const totalSpend   = adminCustomers.reduce((s, c) => s + c.lifetimeSpend, 0);
@@ -77,17 +91,34 @@ export default function AdminDashboard() {
         <StatCard icon={DollarSign} label="Reward Rate"    value={`${REWARDS_RATE * 100}%`}   sub="standard cashback" />
       </div>
 
-      <Link to="/admin/menu"
-        className="w-full glass-gold rounded-2xl p-4 mb-6 flex items-center gap-4 hover:brightness-110 transition-all">
-        <div className="w-11 h-11 rounded-xl gradient-gold flex items-center justify-center shrink-0">
-          <UtensilsCrossed size={20} className="text-black" />
-        </div>
-        <div className="flex-1 text-left">
-          <p className="text-sm font-bold text-white">Menu Management</p>
-          <p className="text-xs text-neutral-400 mt-0.5">Add, edit, and manage items for each restaurant</p>
-        </div>
-        <ChevronRight size={16} className="text-neutral-400 shrink-0" />
-      </Link>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+        <Link to="/admin/menu"
+          className="glass-gold rounded-2xl p-4 flex items-center gap-3 hover:brightness-110 transition-all">
+          <div className="w-11 h-11 rounded-xl gradient-gold flex items-center justify-center shrink-0">
+            <UtensilsCrossed size={20} className="text-black" />
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-sm font-bold text-white">Menu Management</p>
+            <p className="text-xs text-neutral-400 mt-0.5">Add, edit & import items</p>
+          </div>
+          <ChevronRight size={16} className="text-neutral-400 shrink-0" />
+        </Link>
+
+        <button onClick={handleDownload} disabled={downloading}
+          className="glass rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition-all text-left disabled:opacity-60">
+          <div className="w-11 h-11 rounded-xl bg-white/8 border border-white/10 flex items-center justify-center shrink-0">
+            {downloading
+              ? <div className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+              : <Download size={18} className="text-amber-400" />
+            }
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-white">{downloading ? 'Generating PDF…' : 'Download Report'}</p>
+            <p className="text-xs text-neutral-500 mt-0.5">PDF with customers, revenue & items</p>
+          </div>
+          <ChevronRight size={16} className="text-neutral-500 shrink-0" />
+        </button>
+      </div>
 
       <div className="mb-3">
         <p className="text-xs uppercase tracking-widest font-bold text-neutral-500 mb-3">Restaurants in Group</p>

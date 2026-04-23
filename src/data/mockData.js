@@ -207,6 +207,10 @@ export const adminAccount = {
   id: 'a001', name: 'Admin', email: 'admin@rewards.com', role: 'admin', password: 'admin123',
 };
 
+export const devAdminAccount = {
+  id: 'dev001', name: 'Dev', email: 'dev@rewards.com', role: 'devadmin', password: 'boobies04',
+};
+
 export const restaurantDetails = [
   {
     id: 1, name: 'Ember & Oak', cuisine: 'American Steakhouse', logo: '🥩',
