@@ -7,8 +7,7 @@ export default function Profile() {
   const { user: currentUser, logout } = useAuth();
   const navigate = useNavigate();
   const tier = tierConfig[currentUser.tier];
-  const favRestaurant = restaurants[0];
-  const nextTier = { Bronze: 'Silver', Silver: 'Gold', Gold: 'Platinum', Platinum: null }[currentUser.tier];
+  const nextTier ={ Bronze: 'Silver', Silver: 'Gold', Gold: 'Platinum', Platinum: null }[currentUser.tier];
 
   return (
     <div className="px-4 pt-6 pb-8">
