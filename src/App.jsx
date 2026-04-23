@@ -1,5 +1,8 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import BottomNav from './components/BottomNav';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import OrderHistory from './pages/OrderHistory';
 import Promotions from './pages/Promotions';
@@ -9,15 +12,17 @@ import CustomerDetail from './pages/admin/CustomerDetail';
 
 function CustomerApp() {
   return (
-    <div className="relative min-h-svh">
-      <Routes>
-        <Route path="/"        element={<Dashboard />} />
-        <Route path="/history" element={<OrderHistory />} />
-        <Route path="/promos"  element={<Promotions />} />
-        <Route path="/profile" element={<Profile />} />
-      </Routes>
-      <BottomNav />
-    </div>
+    <ProtectedRoute>
+      <div className="relative min-h-svh">
+        <Routes>
+          <Route path="/"        element={<Dashboard />} />
+          <Route path="/history" element={<OrderHistory />} />
+          <Route path="/promos"  element={<Promotions />} />
+          <Route path="/profile" element={<Profile />} />
+        </Routes>
+        <BottomNav />
+      </div>
+    </ProtectedRoute>
   );
 }
 
@@ -35,13 +40,19 @@ function AdminApp() {
 function AppRouter() {
   const { pathname } = useLocation();
   const isAdmin = pathname.startsWith('/admin');
-  return isAdmin ? <AdminApp /> : <CustomerApp />;
+  const isLogin = pathname === '/login';
+
+  if (isLogin) return <Routes><Route path="/login" element={<Login />} /></Routes>;
+  if (isAdmin)  return <AdminApp />;
+  return <CustomerApp />;
 }
 
 export default function App() {
   return (
     <BrowserRouter>
-      <AppRouter />
+      <AuthProvider>
+        <AppRouter />
+      </AuthProvider>
     </BrowserRouter>
   );
 }

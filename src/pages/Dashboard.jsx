@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
 import { ChevronRight, Flame, TrendingUp, Star } from 'lucide-react';
-import { currentUser, orders, restaurants, promotions, tierConfig, REWARDS_RATE } from '../data/mockData';
+import { useAuth } from '../context/AuthContext';
+import { orders, restaurants, promotions, tierConfig, REWARDS_RATE } from '../data/mockData';
 
-function RewardsCard() {
+function RewardsCard({ currentUser }) {
   const tier = tierConfig[currentUser.tier];
   const nextTier = { Bronze: 'Silver', Silver: 'Gold', Gold: 'Platinum', Platinum: null }[currentUser.tier];
   const nextMin = nextTier ? tierConfig[nextTier].min : null;
@@ -111,6 +112,7 @@ function ActivePromo() {
 }
 
 export default function Dashboard() {
+  const { user: currentUser } = useAuth();
   const recentOrders = orders.slice(0, 3);
 
   return (
@@ -125,7 +127,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <RewardsCard />
+      <RewardsCard currentUser={currentUser} />
 
       <div className="flex gap-3 mb-6">
         <StatPill icon={TrendingUp} label="Lifetime Spend" value={`$${currentUser.lifetimeSpend.toFixed(0)}`} />

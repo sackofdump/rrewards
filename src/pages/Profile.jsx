@@ -1,7 +1,11 @@
-import { currentUser, tierConfig, restaurants, orders, REWARDS_RATE } from '../data/mockData';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { tierConfig, orders, REWARDS_RATE } from '../data/mockData';
 import { User, Mail, Phone, Star, Utensils, Gift } from 'lucide-react';
 
 export default function Profile() {
+  const { user: currentUser, logout } = useAuth();
+  const navigate = useNavigate();
   const tier = tierConfig[currentUser.tier];
   const favRestaurant = restaurants[0];
   const nextTier = { Bronze: 'Silver', Silver: 'Gold', Gold: 'Platinum', Platinum: null }[currentUser.tier];
@@ -75,7 +79,10 @@ export default function Profile() {
         </div>
       )}
 
-      <button className="w-full py-3.5 rounded-2xl border border-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/5 transition-colors">
+      <button
+        onClick={() => { logout(); navigate('/login'); }}
+        className="w-full py-3.5 rounded-2xl border border-red-500/20 text-red-400 text-sm font-medium hover:bg-red-500/5 transition-colors"
+      >
         Sign Out
       </button>
     </div>
