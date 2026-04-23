@@ -135,7 +135,7 @@ function AddCardModal({ onClose, onAdd }) {
 }
 
 function QRSheet({ user, onClose }) {
-  const qrValue = JSON.stringify({ uid: user.id, name: user.name, ts: Date.now() });
+  const qrValue = `rewards:${user.id}`;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm"
       onClick={e => e.target === e.currentTarget && onClose()}>
