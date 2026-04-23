@@ -65,7 +65,7 @@ export default function Promotions() {
   const upcoming = promotions.filter(p => !p.active);
 
   return (
-    <div className="px-4 pt-14 pb-24 max-w-md mx-auto">
+    <div className="px-4 pt-6 pb-8">
       <div className="pt-4 mb-6">
         <p className="text-xs text-neutral-500 uppercase tracking-widest font-medium mb-1">All Locations</p>
         <h1 className="text-2xl font-bold text-white tracking-tight">Promotions</h1>

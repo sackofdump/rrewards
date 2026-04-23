@@ -116,7 +116,7 @@ export default function Dashboard() {
   const recentOrders = orders.slice(0, 3);
 
   return (
-    <div className="px-4 pt-14 pb-24 max-w-md mx-auto">
+    <div className="px-4 pt-6 pb-8">
       <div className="flex items-center justify-between mb-6 pt-4">
         <div>
           <p className="text-xs text-neutral-500 uppercase tracking-widest font-medium">Restaurant Group</p>

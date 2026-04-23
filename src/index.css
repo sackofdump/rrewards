@@ -5,16 +5,15 @@
     -webkit-tap-highlight-color: transparent;
     box-sizing: border-box;
   }
-  body {
+  html, body, #root {
     margin: 0;
-    background: #080a0f;
+    height: 100%;
+    overflow: hidden;
+    background: #02030a;
     color: #fff;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-  }
-  #root {
-    min-height: 100svh;
   }
 }
 
