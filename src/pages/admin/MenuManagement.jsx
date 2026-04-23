@@ -3,9 +3,10 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { restaurants, MENU_CATEGORIES } from '../../data/mockData';
 import { useMenuStore } from '../../hooks/useMenuStore';
+import MenuImportModal from './MenuImportModal';
 import {
   ArrowLeft, Plus, Edit2, Trash2, X, Check,
-  UtensilsCrossed, Shield, RotateCcw
+  UtensilsCrossed, Shield, RotateCcw, Sparkles
 } from 'lucide-react';
 
 function ItemModal({ item, restaurantId, onSave, onClose }) {
@@ -107,6 +108,14 @@ export default function MenuManagement() {
   const [selectedRestaurant, setSelectedRestaurant] = useState(restaurants[0].id);
   const [editingItem, setEditingItem] = useState(null);
   const [showAdd, setShowAdd]         = useState(false);
+  const [showImport, setShowImport]   = useState(false);
+  const [importedCount, setImportedCount] = useState(null);
+
+  function handleBulkImport(newItems) {
+    newItems.forEach(item => addItem(item));
+    setImportedCount(newItems.length);
+    setTimeout(() => setImportedCount(null), 3000);
+  }
 
   const restaurantItems = items.filter(i => i.restaurantId === selectedRestaurant);
   const groupedByCategory = MENU_CATEGORIES
@@ -167,11 +176,27 @@ export default function MenuManagement() {
         </div>
       </div>
 
-      {/* Add button */}
-      <button onClick={() => setShowAdd(true)}
-        className="w-full gradient-gold text-black font-bold py-3.5 rounded-xl text-sm mb-5 hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
-        <Plus size={16} /> Add Menu Item
-      </button>
+      {/* Import success banner */}
+      {importedCount !== null && (
+        <div className="glass-gold rounded-xl px-4 py-3 mb-4 flex items-center gap-2">
+          <Check size={14} className="text-green-400 shrink-0" />
+          <p className="text-sm text-white">
+            Imported <span className="font-bold text-amber-400">{importedCount}</span> items from AI extraction
+          </p>
+        </div>
+      )}
+
+      {/* Import / Add buttons */}
+      <div className="flex gap-2 mb-5">
+        <button onClick={() => setShowImport(true)}
+          className="flex-1 glass-gold border border-amber-500/30 text-amber-400 font-bold py-3.5 rounded-xl text-sm hover:brightness-110 transition-all flex items-center justify-center gap-2">
+          <Sparkles size={14} /> Import from URL / Photo
+        </button>
+        <button onClick={() => setShowAdd(true)}
+          className="gradient-gold text-black font-bold px-4 rounded-xl text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5">
+          <Plus size={15} /> Add
+        </button>
+      </div>
 
       {/* Menu items */}
       {groupedByCategory.length === 0 ? (
@@ -235,6 +260,13 @@ export default function MenuManagement() {
           restaurantId={editingItem.restaurantId}
           onSave={handleUpdate}
           onClose={() => setEditingItem(null)}
+        />
+      )}
+      {showImport && (
+        <MenuImportModal
+          restaurantId={selectedRestaurant}
+          onImport={handleBulkImport}
+          onClose={() => setShowImport(false)}
         />
       )}
     </div>
