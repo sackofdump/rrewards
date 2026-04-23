@@ -42,12 +42,14 @@ function CustomerApp() {
 function AdminApp() {
   return (
     <ProtectedRoute role="admin">
-      <div style={{ minHeight: '100svh', overflowY: 'auto' }} className="bg-[#080a0f]">
-        <Routes>
-          <Route path="/admin"               element={<AdminDashboard />} />
-          <Route path="/admin/customers/:id" element={<CustomerDetail />} />
-        </Routes>
-      </div>
+      <MobileShell>
+        <div className="flex-1">
+          <Routes>
+            <Route path="/admin"               element={<AdminDashboard />} />
+            <Route path="/admin/customers/:id" element={<CustomerDetail />} />
+          </Routes>
+        </div>
+      </MobileShell>
     </ProtectedRoute>
   );
 }
@@ -55,16 +57,24 @@ function AdminApp() {
 function StaffApp() {
   return (
     <ProtectedRoute role="staff">
-      <Routes>
-        <Route path="/staff" element={<StaffScanner />} />
-      </Routes>
+      <MobileShell>
+        <div className="flex-1">
+          <Routes>
+            <Route path="/staff" element={<StaffScanner />} />
+          </Routes>
+        </div>
+      </MobileShell>
     </ProtectedRoute>
   );
 }
 
 function AppRouter() {
   const { pathname } = useLocation();
-  if (pathname === '/login')       return <Routes><Route path="/login" element={<Login />} /></Routes>;
+  if (pathname === '/login') return (
+    <MobileShell>
+      <Routes><Route path="/login" element={<Login />} /></Routes>
+    </MobileShell>
+  );
   if (pathname.startsWith('/admin')) return <AdminApp />;
   if (pathname.startsWith('/staff')) return <StaffApp />;
   return <CustomerApp />;

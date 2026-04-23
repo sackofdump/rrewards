@@ -117,12 +117,12 @@ function AddCardModal({ onClose, onAdd }) {
 function QRView({ user, onBack }) {
   const qrValue = `rewards:${user.id}`;
   return (
-    <div className="flex flex-col min-h-full px-4 pt-6 pb-8 max-w-lg mx-auto">
-      <button onClick={onBack} className="flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors mb-8">
+    <div className="px-4 pt-6 pb-8 max-w-lg mx-auto">
+      <button onClick={onBack} className="flex items-center gap-2 text-sm text-neutral-400 hover:text-white transition-colors mb-12">
         <ArrowLeft size={18} /> Back to Wallet
       </button>
 
-      <div className="flex-1 flex flex-col items-center justify-center gap-8">
+      <div className="flex flex-col items-center gap-8">
         <div>
           <p className="text-xs text-neutral-500 uppercase tracking-widest font-semibold text-center mb-1">Rewards QR Code</p>
           <h1 className="text-2xl font-bold text-white text-center">Show to Cashier</h1>
