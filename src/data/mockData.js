@@ -34,7 +34,7 @@ export const promotions = [
 
 export const currentUser = {
   id: 'u001',
-  name: 'Alex Rivera',
+  name: 'Josh',
   email: 'joshe@email.com',
   phone: '(555) 210-3847',
   memberSince: '2024-08-15',
@@ -100,7 +100,7 @@ export const orders = [
 export const adminCustomers = [
   {
     id: 'u001',
-    name: 'Alex Rivera',
+    name: 'Josh',
     email: 'joshe@email.com',
     phone: '(555) 210-3847',
     memberSince: '2024-08-15',
