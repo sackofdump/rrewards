@@ -120,7 +120,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-between mb-6 pt-4">
         <div>
           <p className="text-xs text-neutral-500 uppercase tracking-widest font-medium">Restaurant Group</p>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Prestige Dining</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Rewards</h1>
         </div>
         <div className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-black font-bold text-sm">
           {currentUser.name.split(' ').map(n => n[0]).join('')}

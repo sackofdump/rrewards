@@ -31,7 +31,7 @@ export default function Login() {
           <div className="w-14 h-14 rounded-2xl gradient-gold flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-900/30">
             <span className="text-2xl font-black text-black">P</span>
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Prestige Dining</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Rewards</h1>
           <p className="text-sm text-neutral-500 mt-1">Sign in to your rewards account</p>
         </div>
 
@@ -100,7 +100,7 @@ export default function Login() {
         </form>
 
         <p className="text-center text-xs text-neutral-600 mt-8">
-          New to Prestige Dining?{' '}
+          New to Rewards?{' '}
           <button className="text-amber-400 hover:text-amber-300 transition-colors font-medium">
             Create an account
           </button>

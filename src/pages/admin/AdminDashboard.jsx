@@ -63,7 +63,7 @@ export default function AdminDashboard() {
             <Shield size={14} className="text-amber-400" />
             <p className="text-xs text-amber-400 uppercase tracking-widest font-bold">Admin Panel</p>
           </div>
-          <h1 className="text-2xl font-bold text-white">Prestige Dining</h1>
+          <h1 className="text-2xl font-bold text-white">Rewards</h1>
         </div>
         <Link to="/" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors">
           ← Customer View
