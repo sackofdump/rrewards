@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { adminCustomers, restaurants, tierConfig, REWARDS_RATE } from '../../data/mockData';
-import { Search, Users, TrendingUp, DollarSign, ChevronRight, Shield } from 'lucide-react';
+import { Search, Users, TrendingUp, DollarSign, ChevronRight, Shield, UtensilsCrossed } from 'lucide-react';
 
 function StatCard({ icon: Icon, label, value, sub }) {
   return (
@@ -76,6 +76,18 @@ export default function AdminDashboard() {
         <StatCard icon={TrendingUp} label="Total Spend"    value={`$${(totalSpend/1000).toFixed(1)}k`} sub="all time" />
         <StatCard icon={DollarSign} label="Reward Rate"    value={`${REWARDS_RATE * 100}%`}   sub="standard cashback" />
       </div>
+
+      <Link to="/admin/menu"
+        className="w-full glass-gold rounded-2xl p-4 mb-6 flex items-center gap-4 hover:brightness-110 transition-all">
+        <div className="w-11 h-11 rounded-xl gradient-gold flex items-center justify-center shrink-0">
+          <UtensilsCrossed size={20} className="text-black" />
+        </div>
+        <div className="flex-1 text-left">
+          <p className="text-sm font-bold text-white">Menu Management</p>
+          <p className="text-xs text-neutral-400 mt-0.5">Add, edit, and manage items for each restaurant</p>
+        </div>
+        <ChevronRight size={16} className="text-neutral-400 shrink-0" />
+      </Link>
 
       <div className="mb-3">
         <p className="text-xs uppercase tracking-widest font-bold text-neutral-500 mb-3">Restaurants in Group</p>

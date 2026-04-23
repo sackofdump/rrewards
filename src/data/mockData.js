@@ -170,6 +170,34 @@ export const adminCustomers = [
   },
 ];
 
+export const MENU_CATEGORIES = ['Appetizers', 'Entrees', 'Sides', 'Desserts', 'Drinks'];
+
+export const initialMenuItems = [
+  // Ember & Oak (steakhouse)
+  { id: 1001, restaurantId: 1, name: 'Wagyu Ribeye',    price: 68.00, category: 'Entrees',    description: '12oz aged wagyu, house rub', available: true },
+  { id: 1002, restaurantId: 1, name: 'Filet Mignon',    price: 52.00, category: 'Entrees',    description: '8oz center cut filet',        available: true },
+  { id: 1003, restaurantId: 1, name: 'Truffle Fries',   price: 12.00, category: 'Sides',      description: 'Hand-cut, parmesan, truffle', available: true },
+  { id: 1004, restaurantId: 1, name: 'House Salad',     price: 10.00, category: 'Appetizers', description: 'Mixed greens, vinaigrette',   available: true },
+  { id: 1005, restaurantId: 1, name: 'Crème Brûlée',    price: 11.00, category: 'Desserts',   description: 'Classic vanilla bean',        available: true },
+
+  // Sakura Garden (Japanese)
+  { id: 2001, restaurantId: 2, name: 'Dragon Roll',     price: 18.00, category: 'Entrees',    description: 'Eel, cucumber, avocado',      available: true },
+  { id: 2002, restaurantId: 2, name: 'Miso Soup',       price: 6.00,  category: 'Appetizers', description: 'Tofu, scallions, wakame',     available: true },
+  { id: 2003, restaurantId: 2, name: 'Edamame',         price: 7.00,  category: 'Appetizers', description: 'Sea salt',                    available: true },
+  { id: 2004, restaurantId: 2, name: 'Chicken Ramen',   price: 16.00, category: 'Entrees',    description: 'Shoyu broth, soft egg',       available: true },
+
+  // La Piazza (Italian)
+  { id: 3001, restaurantId: 3, name: 'Fettuccine Alfredo', price: 22.00, category: 'Entrees',    description: 'Housemade pasta, cream sauce', available: true },
+  { id: 3002, restaurantId: 3, name: 'Bruschetta',         price: 11.00, category: 'Appetizers', description: 'Tomato, basil, grilled bread', available: true },
+  { id: 3003, restaurantId: 3, name: 'Tiramisu',           price: 10.00, category: 'Desserts',   description: 'Classic mascarpone',           available: true },
+  { id: 3004, restaurantId: 3, name: 'Margherita Pizza',   price: 18.00, category: 'Entrees',    description: 'San Marzano, fresh mozz',      available: true },
+
+  // The Coastal (Seafood)
+  { id: 4001, restaurantId: 4, name: 'Lobster Bisque',   price: 14.00, category: 'Appetizers', description: 'Cream, sherry, chives',      available: true },
+  { id: 4002, restaurantId: 4, name: 'Pan-Seared Salmon', price: 32.00, category: 'Entrees',    description: 'Atlantic salmon, lemon butter', available: true },
+  { id: 4003, restaurantId: 4, name: 'Key Lime Pie',      price: 9.00,  category: 'Desserts',   description: 'Graham crust, whipped cream',  available: true },
+];
+
 export const staffAccounts = [
   { id: 's001', name: 'Mike T.', email: 'staff@rewards.com',  role: 'staff', restaurantId: 1, password: 'staff123' },
   { id: 's002', name: 'Sara K.', email: 'sara@rewards.com',   role: 'staff', restaurantId: 2, password: 'staff123' },

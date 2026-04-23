@@ -1,9 +1,11 @@
 import { useState, lazy, Suspense } from 'react';
-import { adminCustomers, restaurants, REWARDS_RATE, tierConfig } from '../../data/mockData';
+import { adminCustomers, restaurants, REWARDS_RATE, tierConfig, MENU_CATEGORIES } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
+import { useMenuStore } from '../../hooks/useMenuStore';
 import {
   ScanLine, XCircle, LogOut, ChevronRight,
-  CheckCircle, ArrowLeft, Star, Gift, Receipt
+  CheckCircle, ArrowLeft, Star, Gift, Receipt,
+  Plus, Minus, Trash2, Keyboard, UtensilsCrossed
 } from 'lucide-react';
 
 const QrCameraScanner = lazy(() => import('../../components/QrCameraScanner'));
@@ -89,20 +91,53 @@ function ScanStep({ onCustomerFound, notFound, setNotFound }) {
 
 /* ── STEP 2: Checkout ────────────────────────────────────────────── */
 function CheckoutStep({ customer, restaurantId, onComplete, onBack }) {
-  const [subtotal, setSubtotal]   = useState('');
-  const [redeemOn, setRedeemOn]   = useState(false);
+  const { items: allMenuItems } = useMenuStore();
+  const [cart, setCart]             = useState([]); // [{ id, name, price, qty }]
+  const [manualAmount, setManualAmount] = useState('');
+  const [mode, setMode]             = useState('menu'); // 'menu' | 'manual'
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [redeemOn, setRedeemOn]     = useState(false);
+
   const tier = tierConfig[customer.tier];
   const restaurant = restaurants.find(r => r.id === restaurantId);
 
-  const sub    = parseFloat(subtotal) || 0;
-  const tax    = sub * TAX_RATE;
+  const menuItems = allMenuItems.filter(i => i.restaurantId === restaurantId && i.available);
+  const categoriesInMenu = MENU_CATEGORIES.filter(c => menuItems.some(i => i.category === c));
+  const filteredMenu = activeCategory === 'All'
+    ? menuItems
+    : menuItems.filter(i => i.category === activeCategory);
+
+  const cartSubtotal = cart.reduce((s, it) => s + it.price * it.qty, 0);
+  const sub = mode === 'menu' ? cartSubtotal : (parseFloat(manualAmount) || 0);
+  const tax = sub * TAX_RATE;
   const earned = sub * REWARDS_RATE;
   const redeemAmt = redeemOn ? Math.min(customer.rewardsBalance, sub + tax) : 0;
-  const total  = sub + tax - redeemAmt;
+  const total = Math.max(0, sub + tax - redeemAmt);
+
+  function addToCart(item) {
+    setCart(prev => {
+      const existing = prev.find(c => c.id === item.id);
+      if (existing) return prev.map(c => c.id === item.id ? { ...c, qty: c.qty + 1 } : c);
+      return [...prev, { id: item.id, name: item.name, price: item.price, qty: 1 }];
+    });
+  }
+  function changeQty(id, delta) {
+    setCart(prev => prev
+      .map(c => c.id === id ? { ...c, qty: c.qty + delta } : c)
+      .filter(c => c.qty > 0)
+    );
+  }
+  function removeFromCart(id) {
+    setCart(prev => prev.filter(c => c.id !== id));
+  }
 
   function handleComplete() {
     if (!sub) return;
-    onComplete({ subtotal: sub, tax, earned, redeemAmt, total });
+    onComplete({
+      subtotal: sub,
+      tax, earned, redeemAmt, total,
+      items: mode === 'menu' ? cart : null,
+    });
   }
 
   return (
@@ -128,20 +163,109 @@ function CheckoutStep({ customer, restaurantId, onComplete, onBack }) {
         <span>{restaurant?.name ?? 'Unknown location'}</span>
       </div>
 
-      {/* Charge amount */}
-      <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2">Subtotal</p>
-        <div className="relative">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 text-lg font-semibold">$</span>
-          <input
-            type="number" value={subtotal}
-            onChange={e => setSubtotal(e.target.value)}
-            placeholder="0.00" min="0" step="0.01"
-            autoFocus
-            className="w-full bg-neutral-900 border border-white/8 rounded-xl pl-9 pr-4 py-4 text-white text-2xl font-bold outline-none focus:border-amber-500/50 transition-colors"
-          />
-        </div>
+      {/* Mode toggle */}
+      <div className="glass rounded-xl p-1 flex">
+        <button onClick={() => setMode('menu')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+            mode === 'menu' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25' : 'text-neutral-500'
+          }`}>
+          <UtensilsCrossed size={13} /> Menu Items
+        </button>
+        <button onClick={() => setMode('manual')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+            mode === 'manual' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25' : 'text-neutral-500'
+          }`}>
+          <Keyboard size={13} /> Manual Entry
+        </button>
       </div>
+
+      {mode === 'manual' ? (
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2">Subtotal</p>
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 text-lg font-semibold">$</span>
+            <input
+              type="number" value={manualAmount}
+              onChange={e => setManualAmount(e.target.value)}
+              placeholder="0.00" min="0" step="0.01"
+              autoFocus
+              className="w-full bg-neutral-900 border border-white/8 rounded-xl pl-9 pr-4 py-4 text-white text-2xl font-bold outline-none focus:border-amber-500/50 transition-colors"
+            />
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Cart */}
+          {cart.length > 0 && (
+            <div className="glass rounded-2xl p-3 space-y-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 px-1">Order ({cart.reduce((s, c) => s + c.qty, 0)} items)</p>
+              {cart.map(item => (
+                <div key={item.id} className="flex items-center gap-2 bg-neutral-900/60 rounded-xl px-3 py-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white font-medium truncate">{item.name}</p>
+                    <p className="text-xs text-neutral-500">${item.price.toFixed(2)} ea</p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => changeQty(item.id, -1)}
+                      className="w-7 h-7 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-white">
+                      <Minus size={12} />
+                    </button>
+                    <span className="text-sm font-bold text-white w-6 text-center">{item.qty}</span>
+                    <button onClick={() => changeQty(item.id, 1)}
+                      className="w-7 h-7 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/25 flex items-center justify-center text-amber-400">
+                      <Plus size={12} />
+                    </button>
+                  </div>
+                  <p className="text-sm font-bold text-amber-400 shrink-0 w-16 text-right">
+                    ${(item.price * item.qty).toFixed(2)}
+                  </p>
+                  <button onClick={() => removeFromCart(item.id)}
+                    className="w-7 h-7 rounded-lg hover:bg-red-500/15 flex items-center justify-center text-neutral-500 hover:text-red-400 shrink-0 transition-colors">
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Menu */}
+          {menuItems.length === 0 ? (
+            <div className="glass rounded-2xl py-10 flex flex-col items-center gap-2 text-neutral-500 text-sm">
+              <UtensilsCrossed size={28} strokeWidth={1} />
+              <p>No menu items for this restaurant yet.</p>
+              <p className="text-xs text-neutral-600">Add items in Admin → Menu Management</p>
+            </div>
+          ) : (
+            <>
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
+                {['All', ...categoriesInMenu].map(cat => (
+                  <button key={cat} onClick={() => setActiveCategory(cat)}
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors shrink-0 ${
+                      activeCategory === cat
+                        ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                        : 'bg-neutral-900 text-neutral-400 border border-white/5'
+                    }`}>
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {filteredMenu.map(item => (
+                  <button key={item.id} onClick={() => addToCart(item)}
+                    className="glass rounded-xl p-3 text-left hover:brightness-110 active:scale-95 transition-all">
+                    <p className="text-sm font-bold text-white leading-tight mb-0.5">{item.name}</p>
+                    {item.description && (
+                      <p className="text-[10px] text-neutral-500 line-clamp-1">{item.description}</p>
+                    )}
+                    <p className="text-sm font-bold text-amber-400 mt-1.5">${item.price.toFixed(2)}</p>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </>
+      )}
 
       {/* Breakdown */}
       {sub > 0 && (

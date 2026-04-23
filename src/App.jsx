@@ -10,6 +10,7 @@ import Wallet from './pages/Wallet';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import CustomerDetail from './pages/admin/CustomerDetail';
+import MenuManagement from './pages/admin/MenuManagement';
 import StaffScanner from './pages/staff/StaffScanner';
 
 function MobileShell({ children }) {
@@ -46,6 +47,7 @@ function AdminApp() {
         <div className="flex-1">
           <Routes>
             <Route path="/admin"               element={<AdminDashboard />} />
+            <Route path="/admin/menu"          element={<MenuManagement />} />
             <Route path="/admin/customers/:id" element={<CustomerDetail />} />
           </Routes>
         </div>
