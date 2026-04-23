@@ -39,7 +39,7 @@ export default function Login() {
         <div className="glass rounded-xl px-4 py-3 mb-6 flex items-start gap-2.5">
           <span className="text-amber-400 shrink-0 mt-0.5">💡</span>
           <p className="text-xs text-neutral-400 leading-relaxed">
-            Demo: use <span className="text-white font-medium">alex.rivera@email.com</span> with password{' '}
+            Demo: use <span className="text-white font-medium">joshe@email.com</span> with password{' '}
             <span className="text-white font-medium">password123</span>
           </p>
         </div>

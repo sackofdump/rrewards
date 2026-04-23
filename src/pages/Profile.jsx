@@ -10,7 +10,7 @@ export default function Profile() {
   const nextTier ={ Bronze: 'Silver', Silver: 'Gold', Gold: 'Platinum', Platinum: null }[currentUser.tier];
 
   return (
-    <div className="px-4 pt-6 pb-8">
+    <div className="px-4 pt-6 pb-8 max-w-lg mx-auto">
       <div className="pt-4 mb-6">
         <h1 className="text-2xl font-bold text-white tracking-tight">Account</h1>
       </div>

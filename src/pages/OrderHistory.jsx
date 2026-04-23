@@ -59,7 +59,7 @@ export default function OrderHistory() {
   const totalRewards = orders.reduce((s, o) => s + o.rewards, 0);
 
   return (
-    <div className="px-4 pt-6 pb-8">
+    <div className="px-4 pt-6 pb-8 max-w-lg mx-auto">
       <div className="pt-4 mb-6">
         <p className="text-xs text-neutral-500 uppercase tracking-widest font-medium mb-1">All Restaurants</p>
         <h1 className="text-2xl font-bold text-white tracking-tight">Order History</h1>

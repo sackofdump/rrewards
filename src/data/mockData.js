@@ -35,7 +35,7 @@ export const promotions = [
 export const currentUser = {
   id: 'u001',
   name: 'Alex Rivera',
-  email: 'alex.rivera@email.com',
+  email: 'joshe@email.com',
   phone: '(555) 210-3847',
   memberSince: '2024-08-15',
   tier: 'Gold',
@@ -101,7 +101,7 @@ export const adminCustomers = [
   {
     id: 'u001',
     name: 'Alex Rivera',
-    email: 'alex.rivera@email.com',
+    email: 'joshe@email.com',
     phone: '(555) 210-3847',
     memberSince: '2024-08-15',
     tier: 'Gold',

@@ -12,14 +12,7 @@ import CustomerDetail from './pages/admin/CustomerDetail';
 
 function MobileShell({ children }) {
   return (
-    <div
-      className="flex flex-col bg-[#080a0f] w-full min-h-svh"
-      style={{
-        maxWidth: 430,
-        borderLeft: '1px solid rgba(255,255,255,0.05)',
-        borderRight: '1px solid rgba(255,255,255,0.05)',
-      }}
-    >
+    <div className="flex flex-col bg-[#080a0f] w-full min-h-svh">
       {children}
     </div>
   );
