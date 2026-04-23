@@ -1,144 +1,95 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Eye, EyeOff, Mail, Lock, AlertCircle, User, Utensils, Shield } from 'lucide-react';
+import { User, Utensils, Shield, ChevronRight } from 'lucide-react';
 
-const ROLES = [
-  { key: 'customer', label: 'Customer', icon: User },
-  { key: 'staff',    label: 'Staff',    icon: Utensils },
-  { key: 'admin',    label: 'Admin',    icon: Shield },
+const DEMO_LOGINS = [
+  {
+    role: 'customer',
+    label: 'Customer',
+    name: 'Josh',
+    description: 'View rewards, wallet & order history',
+    icon: User,
+    email: 'joshe@email.com',
+    password: 'password123',
+    redirect: '/',
+  },
+  {
+    role: 'staff',
+    label: 'Staff',
+    name: 'Mike T.',
+    description: 'Scan QR codes & apply rewards',
+    icon: Utensils,
+    email: 'staff@rewards.com',
+    password: 'staff123',
+    redirect: '/staff',
+  },
+  {
+    role: 'admin',
+    label: 'Admin',
+    name: 'Admin',
+    description: 'Manage customers & rewards',
+    icon: Shield,
+    email: 'admin@rewards.com',
+    password: 'admin123',
+    redirect: '/admin',
+  },
 ];
 
-const DEMO = {
-  customer: { email: 'joshe@email.com',   password: 'password123', hint: true },
-  staff:    { email: 'staff@rewards.com', password: 'staff123',    hint: true },
-  admin:    { email: 'admin@rewards.com', password: 'admin123',    hint: true },
-};
-
-const REDIRECT = {
-  customer: '/',
-  staff:    '/staff',
-  admin:    '/admin',
-};
-
 export default function Login() {
-  const { login, error, loading, setError } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
+  const [loadingRole, setLoadingRole] = useState(null);
 
-  const [role, setRole]         = useState('customer');
-  const [email, setEmail]       = useState('');
-  const [password, setPassword] = useState('');
-  const [showPass, setShowPass] = useState(false);
-
-  function switchRole(r) {
-    setRole(r);
-    setEmail('');
-    setPassword('');
-    setError('');
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
+  async function handleLogin(entry) {
+    setLoadingRole(entry.role);
     try {
-      await login(email, password, role);
-      navigate(REDIRECT[role]);
-    } catch { /* error set in context */ }
+      await login(entry.email, entry.password, entry.role);
+      navigate(entry.redirect);
+    } catch {
+      setLoadingRole(null);
+    }
   }
-
-  const demo = DEMO[role];
 
   return (
     <div className="min-h-svh flex flex-col items-center justify-center px-4 py-12"
       style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(212,175,55,0.08) 0%, transparent 60%), #080a0f' }}>
 
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
+        <div className="text-center mb-10">
           <div className="w-14 h-14 rounded-2xl gradient-gold flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-900/30">
             <span className="text-2xl font-black text-black">R</span>
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Rewards</h1>
-          <p className="text-sm text-neutral-500 mt-1">Sign in to your account</p>
+          <p className="text-sm text-neutral-500 mt-1">Select an account to continue</p>
         </div>
 
-        {/* Role selector */}
-        <div className="glass rounded-2xl p-1 flex mb-6">
-          {ROLES.map(({ key, label, icon: Icon }) => (
-            <button key={key} onClick={() => switchRole(key)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                role === key
-                  ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25'
-                  : 'text-neutral-500 hover:text-neutral-300'
-              }`}>
-              <Icon size={13} />
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Demo hint */}
-        <div className="glass rounded-xl px-4 py-3 mb-5 flex items-start gap-2.5">
-          <span className="text-amber-400 shrink-0 mt-0.5 text-xs">💡</span>
-          <p className="text-xs text-neutral-400 leading-relaxed">
-            Demo: <span className="text-white font-medium">{demo.email}</span>
-            {' / '}
-            <span className="text-white font-medium">{demo.password}</span>
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {error && (
-            <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20">
-              <AlertCircle size={15} className="text-red-400 shrink-0" />
-              <p className="text-sm text-red-400">{error}</p>
-            </div>
-          )}
-
-          <div className="relative">
-            <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none" />
-            <input
-              type="email" required value={email}
-              onChange={e => { setEmail(e.target.value); setError(''); }}
-              placeholder="Email address"
-              className="w-full bg-neutral-900 border border-white/8 rounded-xl pl-11 pr-4 py-3.5 text-sm text-white placeholder-neutral-600 outline-none focus:border-amber-500/50 focus:bg-neutral-800/60 transition-all"
-            />
-          </div>
-
-          <div className="relative">
-            <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none" />
-            <input
-              type={showPass ? 'text' : 'password'} required value={password}
-              onChange={e => { setPassword(e.target.value); setError(''); }}
-              placeholder="Password"
-              className="w-full bg-neutral-900 border border-white/8 rounded-xl pl-11 pr-12 py-3.5 text-sm text-white placeholder-neutral-600 outline-none focus:border-amber-500/50 focus:bg-neutral-800/60 transition-all"
-            />
-            <button type="button" onClick={() => setShowPass(s => !s)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 transition-colors">
-              {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          </div>
-
-          {role === 'customer' && (
-            <div className="flex justify-end">
-              <button type="button" className="text-xs text-amber-400 hover:text-amber-300 transition-colors">
-                Forgot password?
+        <div className="space-y-3">
+          {DEMO_LOGINS.map((entry) => {
+            const Icon = entry.icon;
+            const isLoading = loadingRole === entry.role;
+            return (
+              <button
+                key={entry.role}
+                onClick={() => handleLogin(entry)}
+                disabled={loadingRole !== null}
+                className="w-full glass rounded-2xl p-4 flex items-center gap-4 text-left hover:brightness-110 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <div className="w-11 h-11 rounded-xl gradient-gold flex items-center justify-center shrink-0">
+                  <Icon size={18} className="text-black" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white">{entry.label}</p>
+                  <p className="text-xs text-neutral-500 mt-0.5">{entry.description}</p>
+                </div>
+                {isLoading
+                  ? <div className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin shrink-0" />
+                  : <ChevronRight size={16} className="text-neutral-600 shrink-0" />
+                }
               </button>
-            </div>
-          )}
-
-          <button type="submit" disabled={loading}
-            className="w-full gradient-gold text-black font-bold py-3.5 rounded-xl text-sm transition-opacity hover:opacity-90 active:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed mt-1">
-            {loading ? 'Signing in…' : 'Sign In'}
-          </button>
-        </form>
-
-        {role === 'customer' && (
-          <p className="text-center text-xs text-neutral-600 mt-8">
-            New to Rewards?{' '}
-            <button className="text-amber-400 hover:text-amber-300 transition-colors font-medium">
-              Create an account
-            </button>
-          </p>
-        )}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
