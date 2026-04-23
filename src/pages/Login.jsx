@@ -62,6 +62,9 @@ export default function Login() {
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Rewards</h1>
           <p className="text-sm text-neutral-500 mt-1">Select an account to continue</p>
+          <p className="inline-block mt-3 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-[10px] font-bold text-amber-400 uppercase tracking-widest">
+            For Demo Purposes Only
+          </p>
         </div>
 
         <div className="space-y-3">
