@@ -170,6 +170,46 @@ export const adminCustomers = [
   },
 ];
 
+export const staffAccounts = [
+  { id: 's001', name: 'Mike T.', email: 'staff@rewards.com',  role: 'staff', restaurantId: 1, password: 'staff123' },
+  { id: 's002', name: 'Sara K.', email: 'sara@rewards.com',   role: 'staff', restaurantId: 2, password: 'staff123' },
+];
+
+export const adminAccount = {
+  id: 'a001', name: 'Admin', email: 'admin@rewards.com', role: 'admin', password: 'admin123',
+};
+
+export const restaurantDetails = [
+  {
+    id: 1, name: 'Ember & Oak', cuisine: 'American Steakhouse', logo: '🥩',
+    address: '142 Grill St, Downtown', phone: '(555) 100-2233',
+    hours: 'Mon–Thu 11am–10pm · Fri–Sat 11am–11pm · Sun 12pm–9pm',
+    description: 'Wood-fired steaks and seasonal American fare in an intimate setting.',
+    rating: 4.8, reviews: 312,
+  },
+  {
+    id: 2, name: 'Sakura Garden', cuisine: 'Japanese Fusion', logo: '🌸',
+    address: '88 Blossom Ave, Midtown', phone: '(555) 200-4455',
+    hours: 'Daily 12pm–10pm',
+    description: 'Modern Japanese flavors meet traditional technique — sushi, ramen, and more.',
+    rating: 4.7, reviews: 204,
+  },
+  {
+    id: 3, name: 'La Piazza', cuisine: 'Italian', logo: '🍝',
+    address: '31 Cobblestone Ln, West End', phone: '(555) 300-6677',
+    hours: 'Tue–Sun 5pm–10pm · Closed Monday',
+    description: 'Handmade pasta, wood-fired pizza, and an extensive Italian wine list.',
+    rating: 4.9, reviews: 489,
+  },
+  {
+    id: 4, name: 'The Coastal', cuisine: 'Seafood', logo: '🦞',
+    address: '5 Harbor View Blvd, Waterfront', phone: '(555) 400-8899',
+    hours: 'Mon–Sun 11am–11pm',
+    description: 'Daily fresh-catch seafood with stunning waterfront views.',
+    rating: 4.6, reviews: 177,
+  },
+];
+
 export const tierConfig = {
   Bronze:   { min: 0,     max: 200,  color: '#cd7f32', bg: 'rgba(205,127,50,0.15)' },
   Silver:   { min: 200,   max: 600,  color: '#c0c0c0', bg: 'rgba(192,192,192,0.12)' },
