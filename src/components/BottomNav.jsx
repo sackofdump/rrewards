@@ -10,7 +10,7 @@ const links = [
 
 export default function BottomNav() {
   return (
-    <nav className="shrink-0 bg-[#080a0f]/95 backdrop-blur border-t border-white/[0.06] px-2 pb-safe">
+    <nav className="sticky bottom-0 bg-[#080a0f]/95 backdrop-blur border-t border-white/[0.06] px-2 z-50">
       <div className="flex justify-around">
         {links.map(({ to, icon: Icon, label }) => (
           <NavLink

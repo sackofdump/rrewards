@@ -13,13 +13,9 @@ import CustomerDetail from './pages/admin/CustomerDetail';
 function MobileShell({ children }) {
   return (
     <div
-      className="flex flex-col bg-[#080a0f]"
+      className="flex flex-col bg-[#080a0f] w-full min-h-svh"
       style={{
-        position: 'fixed',
-        inset: 0,
         maxWidth: 430,
-        left: '50%',
-        transform: 'translateX(-50%)',
         borderLeft: '1px solid rgba(255,255,255,0.05)',
         borderRight: '1px solid rgba(255,255,255,0.05)',
       }}
@@ -33,7 +29,7 @@ function CustomerApp() {
   return (
     <ProtectedRoute>
       <MobileShell>
-        <div className="flex-1 overflow-y-auto scrollbar-hide">
+        <div className="flex-1 pb-20">
           <Routes>
             <Route path="/"        element={<Dashboard />} />
             <Route path="/history" element={<OrderHistory />} />
@@ -65,9 +61,7 @@ function AppRouter() {
 
   if (isLogin) return (
     <MobileShell>
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
-        <Routes><Route path="/login" element={<Login />} /></Routes>
-      </div>
+      <Routes><Route path="/login" element={<Login />} /></Routes>
     </MobileShell>
   );
   if (isAdmin) return <AdminApp />;
