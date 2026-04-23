@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import QRCode from 'react-qr-code';
+import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../context/AuthContext';
 import {
   CreditCard, Plus, Trash2, ChevronRight,
@@ -129,7 +129,7 @@ function QRView({ user, onBack }) {
         </div>
 
         <div className="p-6 bg-white rounded-3xl shadow-2xl shadow-black/50">
-          <QRCode value={qrValue} size={220} fgColor="#080a0f" bgColor="#ffffff" />
+          <QRCodeSVG value={qrValue} size={220} fgColor="#080a0f" bgColor="#ffffff" />
         </div>
 
         <div className="text-center glass rounded-2xl px-6 py-4 w-full">
