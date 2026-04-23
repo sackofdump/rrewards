@@ -24,7 +24,7 @@ function CustomerApp() {
   return (
     <ProtectedRoute role="customer">
       <MobileShell>
-        <div className="flex-1">
+        <div className="flex-1 pb-24">
           <Routes>
             <Route path="/"            element={<Dashboard />} />
             <Route path="/history"     element={<OrderHistory />} />
