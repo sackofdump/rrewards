@@ -79,11 +79,42 @@ export function AuthProvider({ children }) {
         localStorage.removeItem('rr_user');
       }
     });
+
+    // No-op cleanup target — kept for clarity
     return () => {
       mounted = false;
       authSub?.subscription?.unsubscribe?.();
     };
   }, []);
+
+  // Subscribe to realtime updates on the current customer's profile so
+  // balance/tier/lifetime etc. refresh when staff credits them.
+  useEffect(() => {
+    if (!user?.supabaseBacked || !user?.id) return;
+    const ch = supabase
+      .channel(`profile_${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
+        (payload) => {
+          const updated = profileToUser(payload.new);
+          setUser(prev => ({ ...prev, ...updated }));
+          try { localStorage.setItem('rr_user', JSON.stringify({ ...user, ...updated })); } catch {}
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [user?.id, user?.supabaseBacked]);
+
+  async function refreshUser() {
+    if (!user?.id || !user?.supabaseBacked) return;
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
+    if (data) {
+      const refreshed = profileToUser(data);
+      setUser(prev => ({ ...prev, ...refreshed }));
+      try { localStorage.setItem('rr_user', JSON.stringify({ ...user, ...refreshed })); } catch {}
+    }
+  }
 
   async function login(email, password, role = 'customer', { liveMode = false } = {}) {
     setLoading(true);
@@ -202,7 +233,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, signInAs, logout, error, loading, setError, sessionChecked }}>
+    <AuthContext.Provider value={{ user, login, signInAs, logout, refreshUser, error, loading, setError, sessionChecked }}>
       {children}
     </AuthContext.Provider>
   );

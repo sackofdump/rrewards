@@ -64,34 +64,43 @@ export function useCustomerStats() {
     // Supabase-backed customer: fire-and-forget update via RPC-like logic
     if (isLive()) {
       (async () => {
-        const { data: current } = await supabase
+        const { data: current, error: fetchErr } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', customerId)
           .maybeSingle();
-        if (!current) return fallbackLocalApply(customerId, patch);
+        if (fetchErr) { console.error('profile fetch failed', fetchErr); return; }
+        if (!current)  return fallbackLocalApply(customerId, patch);
 
         const merged = { ...current };
         for (const [k, v] of Object.entries(patch)) {
           const col = camelToSnake(k);
-          if (typeof v === 'number' && typeof current[col] === 'number') {
-            merged[col] = Number(current[col]) + v;
-          } else if (v === null || v === undefined) {
+          if (typeof v === 'number') {
+            // Supabase returns `numeric` as string — force-parse current value
+            const currentNum = Number(current[col] ?? 0);
+            merged[col] = currentNum + v;
+          } else if (v == null) {
             /* skip */
           } else {
             merged[col] = v;
           }
         }
-        merged.tier = computeTier(merged.lifetime_spend);
-        await supabase.from('profiles').update({
-          rewards_balance: merged.rewards_balance,
-          lifetime_spend:  merged.lifetime_spend,
-          lifetime_earned: merged.lifetime_earned,
-          orders_count:    merged.orders_count,
+        merged.tier = computeTier(Number(merged.lifetime_spend ?? 0));
+
+        const updatePayload = {
+          rewards_balance: Number(merged.rewards_balance ?? 0),
+          lifetime_spend:  Number(merged.lifetime_spend ?? 0),
+          lifetime_earned: Number(merged.lifetime_earned ?? 0),
+          orders_count:    Number(merged.orders_count ?? 0),
           last_visit:      merged.last_visit,
           status:          merged.status,
           tier:            merged.tier,
-        }).eq('id', customerId);
+        };
+        const { error: updErr } = await supabase
+          .from('profiles')
+          .update(updatePayload)
+          .eq('id', customerId);
+        if (updErr) console.error('profile update failed', updErr);
         notify();
       })();
       return;

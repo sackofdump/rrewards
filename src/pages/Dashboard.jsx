@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Flame, TrendingUp, Star, Bell, Target, Trophy } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -119,8 +120,11 @@ function ActivePromo() {
 }
 
 export default function Dashboard() {
-  const { user: authUser } = useAuth();
+  const { user: authUser, refreshUser } = useAuth();
   const { rewardRate } = useSettings();
+
+  // Pull latest profile on mount in case balance changed while away
+  useEffect(() => { refreshUser?.(); }, []);
   const { get } = useCustomerStats();
   const { getByUser } = useOrderStore();
   // Merge live stats (rewardsBalance, lifetime...) into the user object
