@@ -1,6 +1,7 @@
 import { createContext, useContext, useState } from 'react';
-import { adminCustomers, staffAccounts, adminAccount, devAdminAccount } from '../data/mockData';
+import { adminCustomers, adminAccount, devAdminAccount } from '../data/mockData';
 import { hashPassword } from '../hooks/useUserStore';
+import { getAllStaff } from '../hooks/useStaffStore';
 
 const AuthContext = createContext(null);
 
@@ -58,7 +59,7 @@ export function AuthProvider({ children }) {
             found = { ...found, role: 'customer' };
           }
         } else if (role === 'staff') {
-          found = staffAccounts.find(s => s.email.toLowerCase() === email.toLowerCase());
+          found = getAllStaff().find(s => s.email.toLowerCase() === email.toLowerCase());
           if (!found || password !== found.password) {
             setError('Invalid staff credentials.');
             setLoading(false); reject(); return;

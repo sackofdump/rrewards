@@ -4,6 +4,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
 import { useMenuStore } from '../../hooks/useMenuStore';
 import { useActivityLog } from '../../hooks/useActivityLog';
+import { useOrderStore } from '../../hooks/useOrderStore';
+import { useCustomerStats } from '../../hooks/useCustomerStats';
+import { useNotifications } from '../../hooks/useNotifications';
 import {
   ScanLine, XCircle, LogOut, ChevronRight,
   CheckCircle, ArrowLeft, Star, Gift, Receipt,
@@ -377,17 +380,52 @@ export default function StaffScanner() {
   const { user, logout } = useAuth();
   const [step, setStep]           = useState('scan');   // 'scan' | 'checkout' | 'receipt'
   const { logAction } = useActivityLog();
+  const { addOrder } = useOrderStore();
+  const { recordOrder, get: getCustomer } = useCustomerStats();
+  const { addNotification } = useNotifications();
   const [customer, setCustomer]   = useState(null);
   const [notFound, setNotFound]   = useState(false);
   const [restaurant, setRestaurant] = useState(restaurants[0].id);
   const [tx, setTx]               = useState(null);
 
   function handleCustomerFound(c) {
-    setCustomer(c);
+    // Refresh to latest stats in case they've been updated elsewhere
+    const fresh = getCustomer(c.id) ?? c;
+    setCustomer(fresh);
     setStep('checkout');
   }
 
   function handleComplete(txData) {
+    const restaurantName = restaurants.find(r => r.id === restaurant)?.name ?? 'Unknown';
+
+    // 1. Persist order to the store (shows up in customer history + admin)
+    addOrder({
+      userId: customer.id,
+      restaurantId: restaurant,
+      items: txData.items ?? [],
+      subtotal: txData.subtotal,
+      tax: txData.tax,
+      total: txData.total,
+      rewards: txData.earned,
+      server: user?.name ?? 'Staff',
+    });
+
+    // 2. Update customer stats (balance, lifetime, visit count, tier)
+    recordOrder(customer.id, {
+      total: txData.total,
+      earned: txData.earned,
+      redeemed: txData.redeemAmt,
+    });
+
+    // 3. Notify the customer
+    addNotification({
+      userId: customer.id,
+      type: 'reward',
+      title: `You earned $${txData.earned.toFixed(2)}`,
+      body: `From your ${restaurantName} order`,
+    });
+
+    // 4. Log the action (anomaly detection)
     logAction({
       actorId: user?.id ?? 'unknown',
       actorName: user?.name ?? 'Unknown Staff',
@@ -404,6 +442,7 @@ export default function StaffScanner() {
         restaurantId: restaurant,
       },
     });
+
     setTx(txData);
     setStep('receipt');
   }

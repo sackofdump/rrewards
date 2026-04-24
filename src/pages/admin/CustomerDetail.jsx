@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { adminCustomers, restaurants, orders, tierConfig } from '../../data/mockData';
+import { adminCustomers, restaurants, tierConfig } from '../../data/mockData';
 import { useSettings } from '../../context/SettingsContext';
+import { useOrderStore } from '../../hooks/useOrderStore';
+import { useCustomerStats } from '../../hooks/useCustomerStats';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../hooks/useNotifications';
@@ -163,7 +165,11 @@ export default function CustomerDetail() {
   const { rewardRate } = useSettings();
   const { addNotification } = useNotifications();
   const { logAction } = useActivityLog();
-  const [customer, setCustomer] = useState(adminCustomers.find(c => c.id === id));
+  const { get: getCustomer, applyDelta, setStat } = useCustomerStats();
+  const { getByUser } = useOrderStore();
+  // Live customer (merges overrides + registered users)
+  const customer = getCustomer(id) ?? adminCustomers.find(c => c.id === id);
+  const customerOrders = getByUser(id).sort((a, b) => new Date(b.date) - new Date(a.date));
   const [adjustAmount, setAdjustAmount] = useState('');
   const [adjustNote, setAdjustNote]     = useState('');
   const [adjustSuccess, setAdjustSuccess] = useState(false);
@@ -195,11 +201,7 @@ export default function CustomerDetail() {
   );
 
   const tier = tierConfig[customer.tier];
-  const customerOrders = orders
-    .filter(o => o.userId === customer.id)
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  // Aggregate stats from actual orders
   const favRestaurant = (() => {
     const counts = {};
     customerOrders.forEach(o => { counts[o.restaurantId] = (counts[o.restaurantId] || 0) + 1; });
@@ -214,10 +216,10 @@ export default function CustomerDetail() {
     const amt = parseFloat(adjustAmount);
     if (!amt || isNaN(amt)) return;
     const delta = dir === 'add' ? amt : -amt;
-    setCustomer(c => ({
-      ...c,
-      rewardsBalance: Math.max(0, c.rewardsBalance + delta)
-    }));
+    const previousBalance = customer.rewardsBalance;
+    const nextBalance = Math.max(0, previousBalance + delta);
+    // Use absolute set so we can clamp at 0
+    setStat(customer.id, { rewardsBalance: nextBalance });
     logAction({
       actorId: actor?.id ?? 'unknown',
       actorName: actor?.name ?? 'Manager',
@@ -226,7 +228,7 @@ export default function CustomerDetail() {
       targetId: customer.id,
       targetName: customer.name,
       amount: delta,
-      details: { direction: dir, note: adjustNote || null, previousBalance: customer.rewardsBalance },
+      details: { direction: dir, note: adjustNote || null, previousBalance },
     });
     setAdjustAmount(''); setAdjustNote('');
     setAdjustSuccess(true);
@@ -234,7 +236,7 @@ export default function CustomerDetail() {
   }
   function toggleStatus() {
     const nextStatus = customer.status === 'active' ? 'inactive' : 'active';
-    setCustomer(c => ({ ...c, status: nextStatus }));
+    setStat(customer.id, { status: nextStatus });
     logAction({
       actorId: actor?.id ?? 'unknown',
       actorName: actor?.name ?? 'Manager',

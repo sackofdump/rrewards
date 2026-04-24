@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { orders, restaurants } from '../data/mockData';
+import { restaurants } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../hooks/useFavorites';
+import { useOrderStore } from '../hooks/useOrderStore';
 import { Package, ChevronDown, ChevronUp, Heart, Check } from 'lucide-react';
 
 function OrderCard({ order }) {
@@ -100,7 +101,8 @@ function OrderCard({ order }) {
 
 export default function OrderHistory() {
   const { user } = useAuth();
-  const userOrders = orders.filter(o => o.userId === user?.id);
+  const { getByUser } = useOrderStore();
+  const userOrders = getByUser(user?.id);
   const sortedOrders = [...userOrders].sort((a, b) => new Date(b.date) - new Date(a.date));
   const totalRewards = userOrders.reduce((s, o) => s + o.rewards, 0);
 

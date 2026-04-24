@@ -4,7 +4,9 @@ import { restaurantDetails } from '../data/mockData';
 import { usePromotionsStore } from '../hooks/usePromotionsStore';
 import { useAuth } from '../context/AuthContext';
 import { useFavorites } from '../hooks/useFavorites';
-import { MapPin, Phone, Clock, Star, ChevronRight, X, Percent, Heart, Trash2 } from 'lucide-react';
+import { useMenuStore } from '../hooks/useMenuStore';
+import { MENU_CATEGORIES } from '../data/mockData';
+import { MapPin, Phone, Clock, Star, ChevronRight, X, Percent, Heart, Trash2, BookOpen, Navigation } from 'lucide-react';
 
 function PromoChip({ promo }) {
   return (
@@ -19,9 +21,19 @@ function PromoChip({ promo }) {
 function DetailSheet({ restaurant, onClose }) {
   const { user } = useAuth();
   const { promos } = usePromotionsStore();
-  const { getByRestaurant, removeFavorite } = useFavorites(user?.id);
+  const { getByRestaurant, removeFavorite, hasFavorite, toggleFavorite } = useFavorites(user?.id);
+  const { items: allMenuItems } = useMenuStore();
   const favorites = getByRestaurant(restaurant.id);
   const promo = promos.find(p => p.restaurantId === restaurant.id && p.active);
+  const [view, setView] = useState('info'); // 'info' | 'menu'
+
+  const menuItems = allMenuItems.filter(i => i.restaurantId === restaurant.id && i.available);
+  const categoriesWithItems = MENU_CATEGORIES.filter(c => menuItems.some(i => i.category === c));
+
+  function openDirections() {
+    const query = encodeURIComponent(restaurant.address || restaurant.name);
+    window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+  }
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 backdrop-blur-sm"
       onClick={e => e.target === e.currentTarget && onClose()}>
@@ -48,53 +60,124 @@ function DetailSheet({ restaurant, onClose }) {
           {promo && <div className="mt-4"><PromoChip promo={promo} /></div>}
         </div>
 
-        <div className="px-6 py-5 space-y-4 pb-10 max-h-[60vh] overflow-y-auto">
-          <p className="text-sm text-neutral-400 leading-relaxed">{restaurant.description}</p>
-
-          <div className="space-y-3">
-            {[
-              { icon: MapPin,  text: restaurant.address },
-              { icon: Phone,   text: restaurant.phone   },
-              { icon: Clock,   text: restaurant.hours   },
-            ].map(({ icon: Icon, text }) => (
-              <div key={text} className="flex items-start gap-3">
-                <Icon size={15} className="text-neutral-500 shrink-0 mt-0.5" />
-                <p className="text-sm text-neutral-300 leading-relaxed">{text}</p>
-              </div>
-            ))}
+        {/* Tabs */}
+        <div className="px-6 pt-4 border-b border-white/5">
+          <div className="flex gap-1">
+            <button onClick={() => setView('info')}
+              className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest transition-colors ${
+                view === 'info' ? 'text-amber-400 border-b-2 border-amber-400' : 'text-neutral-500'
+              }`}>
+              Info
+            </button>
+            <button onClick={() => setView('menu')}
+              className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-1.5 ${
+                view === 'menu' ? 'text-amber-400 border-b-2 border-amber-400' : 'text-neutral-500'
+              }`}>
+              <BookOpen size={12} /> Menu ({menuItems.length})
+            </button>
           </div>
+        </div>
 
-          {/* Favorites */}
-          <div className="pt-2">
-            <div className="flex items-center gap-2 mb-2">
-              <Heart size={13} className="text-rose-400" fill="currentColor" />
-              <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">
-                My Favorites ({favorites.length})
-              </p>
-            </div>
-            {favorites.length === 0 ? (
-              <div className="glass rounded-xl p-3 text-xs text-neutral-500 text-center">
-                No favorites here yet — tap the heart on items in your order history.
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                {favorites.map(f => (
-                  <div key={f.id} className="group flex items-center gap-2 glass rounded-xl px-3 py-2">
-                    <Heart size={11} className="text-rose-400 shrink-0" fill="currentColor" />
-                    <span className="text-sm text-white flex-1 truncate">{f.name}</span>
-                    <span className="text-xs text-amber-400 font-semibold shrink-0">${f.price.toFixed(2)}</span>
-                    <button onClick={() => removeFavorite(f.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity text-neutral-600 hover:text-red-400 shrink-0 p-1">
-                      <Trash2 size={11} />
-                    </button>
+        <div className="px-6 py-5 space-y-4 pb-10 max-h-[55vh] overflow-y-auto">
+          {view === 'info' && (
+            <>
+              <p className="text-sm text-neutral-400 leading-relaxed">{restaurant.description}</p>
+
+              <div className="space-y-3">
+                {[
+                  { icon: MapPin,  text: restaurant.address },
+                  { icon: Phone,   text: restaurant.phone   },
+                  { icon: Clock,   text: restaurant.hours   },
+                ].filter(({ text }) => text).map(({ icon: Icon, text }) => (
+                  <div key={text} className="flex items-start gap-3">
+                    <Icon size={15} className="text-neutral-500 shrink-0 mt-0.5" />
+                    <p className="text-sm text-neutral-300 leading-relaxed">{text}</p>
                   </div>
                 ))}
               </div>
-            )}
-          </div>
 
-          <button className="w-full gradient-gold text-black font-bold py-3.5 rounded-xl text-sm hover:opacity-90 transition-opacity mt-2">
-            Get Directions
+              {/* Favorites */}
+              <div className="pt-2">
+                <div className="flex items-center gap-2 mb-2">
+                  <Heart size={13} className="text-rose-400" fill="currentColor" />
+                  <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">
+                    My Favorites ({favorites.length})
+                  </p>
+                </div>
+                {favorites.length === 0 ? (
+                  <div className="glass rounded-xl p-3 text-xs text-neutral-500 text-center">
+                    No favorites here yet — tap the heart on items in your order history or menu.
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {favorites.map(f => (
+                      <div key={f.id} className="group flex items-center gap-2 glass rounded-xl px-3 py-2">
+                        <Heart size={11} className="text-rose-400 shrink-0" fill="currentColor" />
+                        <span className="text-sm text-white flex-1 truncate">{f.name}</span>
+                        <span className="text-xs text-amber-400 font-semibold shrink-0">${f.price.toFixed(2)}</span>
+                        <button onClick={() => removeFavorite(f.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-neutral-600 hover:text-red-400 shrink-0 p-1">
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {view === 'menu' && (
+            <div className="space-y-4">
+              {menuItems.length === 0 ? (
+                <div className="text-center py-10 text-neutral-500 text-sm">
+                  <BookOpen size={28} strokeWidth={1} className="mx-auto mb-2" />
+                  <p>Menu not available yet</p>
+                </div>
+              ) : (
+                categoriesWithItems.map(cat => (
+                  <div key={cat}>
+                    <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2">{cat}</p>
+                    <div className="space-y-1.5">
+                      {menuItems.filter(i => i.category === cat).map(item => {
+                        const faved = hasFavorite(restaurant.id, item.name);
+                        return (
+                          <div key={item.id} className="glass rounded-xl px-3 py-2.5 flex items-center gap-2.5">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-white truncate">{item.name}</p>
+                              {item.description && (
+                                <p className="text-xs text-neutral-500 truncate">{item.description}</p>
+                              )}
+                            </div>
+                            <button onClick={() => toggleFavorite({
+                              restaurantId: restaurant.id, name: item.name, price: item.price
+                            })}
+                              className={`p-1.5 transition-colors ${
+                                faved ? 'text-rose-400' : 'text-neutral-600 hover:text-rose-400'
+                              }`}>
+                              <Heart size={13} fill={faved ? 'currentColor' : 'none'} />
+                            </button>
+                            <span className="text-sm font-bold text-amber-400 shrink-0">${item.price.toFixed(2)}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer actions */}
+        <div className="p-5 border-t border-white/5 flex gap-2">
+          <button onClick={openDirections}
+            className="flex-1 glass rounded-xl py-3 flex items-center justify-center gap-2 text-sm font-semibold text-white hover:bg-white/5 transition-colors">
+            <Navigation size={14} /> Directions
+          </button>
+          <button onClick={() => setView(view === 'menu' ? 'info' : 'menu')}
+            className="flex-1 gradient-gold text-black font-bold py-3 rounded-xl text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+            <BookOpen size={14} /> {view === 'menu' ? 'See Info' : 'See Menu'}
           </button>
         </div>
       </div>

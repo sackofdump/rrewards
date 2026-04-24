@@ -5,7 +5,9 @@ import { useSettings } from '../context/SettingsContext';
 import { usePromotionsStore } from '../hooks/usePromotionsStore';
 import { useNotifications } from '../hooks/useNotifications';
 import { useChallenges } from '../hooks/useChallenges';
-import { orders, restaurants, tierConfig } from '../data/mockData';
+import { useOrderStore } from '../hooks/useOrderStore';
+import { useCustomerStats } from '../hooks/useCustomerStats';
+import { restaurants, tierConfig } from '../data/mockData';
 
 function RewardsCard({ currentUser }) {
   const tier = tierConfig[currentUser.tier];
@@ -117,11 +119,18 @@ function ActivePromo() {
 }
 
 export default function Dashboard() {
-  const { user: currentUser } = useAuth();
+  const { user: authUser } = useAuth();
   const { rewardRate } = useSettings();
+  const { get } = useCustomerStats();
+  const { getByUser } = useOrderStore();
+  // Merge live stats (rewardsBalance, lifetime...) into the user object
+  const liveStats = authUser ? get(authUser.id) : null;
+  const currentUser = liveStats ? { ...authUser, ...liveStats } : authUser;
   const { unreadCount } = useNotifications(currentUser?.id);
   const { challenges } = useChallenges(currentUser?.id);
-  const recentOrders = orders.filter(o => o.userId === currentUser?.id).slice(0, 3);
+  const recentOrders = getByUser(currentUser?.id)
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 3);
   const claimableChallenges = challenges.filter(c => c.completed && !c.claimedAt).length;
   const activeChallenge = challenges.find(c => !c.claimedAt);
 

@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import { adminCustomers, restaurants, tierConfig } from '../../data/mockData';
 import { useMenuStore } from '../../hooks/useMenuStore';
 import { useSettings } from '../../context/SettingsContext';
+import { useCustomerStats } from '../../hooks/useCustomerStats';
 import { exportCustomersCSV, exportOrdersCSV } from '../../utils/generateCSV';
 import { useActivityLog } from '../../hooks/useActivityLog';
-import { Search, Users, TrendingUp, DollarSign, ChevronRight, Shield, UtensilsCrossed, Download, Flame, Settings as SettingsIcon, BarChart3, FileSpreadsheet, Target, ShieldAlert } from 'lucide-react';
+import { Search, Users, TrendingUp, DollarSign, ChevronRight, Shield, UtensilsCrossed, Download, Flame, Settings as SettingsIcon, BarChart3, FileSpreadsheet, Target, ShieldAlert, UserCog } from 'lucide-react';
 
 function StatCard({ icon: Icon, label, value, sub }) {
   return (
@@ -52,7 +53,10 @@ export default function AdminDashboard() {
   const { items: menuItems } = useMenuStore();
   const { rewardRate } = useSettings();
   const { entries } = useActivityLog();
+  const { get } = useCustomerStats();
   const staffAnomalies = entries.filter(e => e.actorRole === 'staff' && e.anomaly).length;
+  // Merge in live stats overrides so balances reflect staff transactions
+  const liveCustomers = adminCustomers.map(c => ({ ...c, ...(get(c.id) || {}) }));
 
   const [downloading, setDownloading] = useState(false);
 
@@ -66,11 +70,11 @@ export default function AdminDashboard() {
     }
   }
 
-  const totalBalance = adminCustomers.reduce((s, c) => s + c.rewardsBalance, 0);
-  const totalSpend   = adminCustomers.reduce((s, c) => s + c.lifetimeSpend, 0);
-  const activeCount  = adminCustomers.filter(c => c.status === 'active').length;
+  const totalBalance = liveCustomers.reduce((s, c) => s + c.rewardsBalance, 0);
+  const totalSpend   = liveCustomers.reduce((s, c) => s + c.lifetimeSpend, 0);
+  const activeCount  = liveCustomers.filter(c => c.status === 'active').length;
 
-  const filtered = adminCustomers.filter(c =>
+  const filtered = liveCustomers.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     c.email.toLowerCase().includes(search.toLowerCase())
   );
@@ -91,7 +95,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <StatCard icon={Users}      label="Members"        value={adminCustomers.length}      sub={`${activeCount} active`} />
+        <StatCard icon={Users}      label="Members"        value={liveCustomers.length}      sub={`${activeCount} active`} />
         <StatCard icon={DollarSign} label="Rewards Out"    value={`$${totalBalance.toFixed(2)}`} sub="pending redemption" />
         <StatCard icon={TrendingUp} label="Total Spend"    value={`$${(totalSpend/1000).toFixed(1)}k`} sub="all time" />
         <StatCard icon={DollarSign} label="Reward Rate"    value={`${rewardRate * 100}%`}   sub="standard cashback" />
@@ -169,6 +173,18 @@ export default function AdminDashboard() {
             <p className="text-xs text-neutral-500 mt-0.5">
               {staffAnomalies > 0 ? 'Anomalies detected' : 'No alerts'}
             </p>
+          </div>
+          <ChevronRight size={16} className="text-neutral-500 shrink-0" />
+        </Link>
+
+        <Link to="/admin/staff"
+          className="glass rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition-all">
+          <div className="w-11 h-11 rounded-xl bg-cyan-500/15 border border-cyan-500/25 flex items-center justify-center shrink-0">
+            <UserCog size={18} className="text-cyan-400" />
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-sm font-bold text-white">Staff</p>
+            <p className="text-xs text-neutral-500 mt-0.5">Add & manage staff</p>
           </div>
           <ChevronRight size={16} className="text-neutral-500 shrink-0" />
         </Link>
