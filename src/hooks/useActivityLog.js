@@ -59,7 +59,17 @@ function detectAnomaly(entry, recentEntries) {
   const now = new Date(entry.createdAt);
 
   if (entry.action === 'reward.apply') {
-    const { subtotal = 0, orderTotal = 0, rewardAmount = 0 } = entry.details || {};
+    const { subtotal = 0, orderTotal = 0, rewardAmount = 0, manualEntry = false } = entry.details || {};
+
+    // Manual entry on a registered customer would have been blocked by the
+    // UI — if it shows up here, someone got around the guard.
+    if (manualEntry) {
+      return {
+        level: 'warning',
+        reason: `Manual subtotal entry (no itemized order) — $${(subtotal || orderTotal).toFixed(2)}`,
+      };
+    }
+
     const basis = subtotal > 0 ? subtotal : orderTotal;
     if (basis > 0) {
       const ratio = rewardAmount / basis;

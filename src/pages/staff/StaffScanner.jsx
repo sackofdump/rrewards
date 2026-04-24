@@ -148,7 +148,10 @@ function CheckoutStep({ customer, restaurantId, onComplete, onBack }) {
   const { rewardRate, taxRate } = useSettings();
   const [cart, setCart]             = useState([]); // [{ id, name, price, qty }]
   const [manualAmount, setManualAmount] = useState('');
-  const [mode, setMode]             = useState('menu'); // 'menu' | 'manual'
+  // Registered (real) customers can't use manual entry — menu items only
+  // to prevent staff inflating amounts for reward fraud.
+  const manualBlocked = Boolean(customer.supabaseBacked);
+  const [mode, setMode]             = useState(manualBlocked ? 'menu' : 'menu'); // 'menu' | 'manual'
   const [activeCategory, setActiveCategory] = useState('All');
   const [redeemOn, setRedeemOn]     = useState(false);
   const [tipMode, setTipMode]       = useState('pct'); // 'pct' | 'custom' | 'none'
@@ -195,10 +198,13 @@ function CheckoutStep({ customer, restaurantId, onComplete, onBack }) {
 
   function handleComplete() {
     if (!sub) return;
+    // Safety: refuse manual-entry transactions on registered customers
+    if (manualBlocked && mode !== 'menu') return;
     onComplete({
       subtotal: sub,
       tax, tip, earned, redeemAmt, total,
       items: mode === 'menu' ? cart : null,
+      manualEntry: mode === 'manual',
     });
   }
 
@@ -225,21 +231,31 @@ function CheckoutStep({ customer, restaurantId, onComplete, onBack }) {
         <span>{restaurant?.name ?? 'Unknown location'}</span>
       </div>
 
-      {/* Mode toggle */}
-      <div className="glass rounded-xl p-1 flex">
-        <button onClick={() => setMode('menu')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-            mode === 'menu' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25' : 'text-neutral-500'
-          }`}>
-          <UtensilsCrossed size={13} /> Menu Items
-        </button>
-        <button onClick={() => setMode('manual')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-            mode === 'manual' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25' : 'text-neutral-500'
-          }`}>
-          <Keyboard size={13} /> Manual Entry
-        </button>
-      </div>
+      {/* Mode toggle — manual entry locked for registered customers */}
+      {manualBlocked ? (
+        <div className="glass rounded-xl px-4 py-3 flex items-center gap-2.5 text-xs text-neutral-400 leading-relaxed">
+          <UtensilsCrossed size={14} className="text-amber-400 shrink-0" />
+          <span>
+            Registered customer — <span className="text-white font-semibold">menu items only</span>.
+            Manual amount entry is disabled to prevent reward fraud.
+          </span>
+        </div>
+      ) : (
+        <div className="glass rounded-xl p-1 flex">
+          <button onClick={() => setMode('menu')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+              mode === 'menu' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25' : 'text-neutral-500'
+            }`}>
+            <UtensilsCrossed size={13} /> Menu Items
+          </button>
+          <button onClick={() => setMode('manual')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+              mode === 'manual' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25' : 'text-neutral-500'
+            }`}>
+            <Keyboard size={13} /> Manual Entry
+          </button>
+        </div>
+      )}
 
       {mode === 'manual' ? (
         <div>
@@ -559,6 +575,7 @@ export default function StaffScanner() {
         rewardAmount: txData.earned,
         redeemed: txData.redeemAmt,
         restaurantId: restaurant,
+        manualEntry: Boolean(txData.manualEntry),
       },
     });
 
