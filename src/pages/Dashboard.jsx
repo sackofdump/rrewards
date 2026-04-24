@@ -10,8 +10,49 @@ import { useOrderStore } from '../hooks/useOrderStore';
 import { useCustomerStats } from '../hooks/useCustomerStats';
 import { restaurants, tierConfig } from '../data/mockData';
 
+/* Per-tier visual treatment for the main rewards card */
+const TIER_THEME = {
+  Bronze: {
+    bgGradient: 'linear-gradient(135deg, #1a0f05 0%, #2a1808 60%, #1a0d00 100%)',
+    borderColor: 'rgba(205,127,50,0.32)',
+    radial: '#cd7f32',
+    progressGradient: 'linear-gradient(135deg, #a66025 0%, #cd7f32 50%, #8a4e1e 100%)',
+    textAccent: '#d69d5e',
+    textSoft:   '#cd7f3299',
+    textMute:   '#cd7f3266',
+  },
+  Silver: {
+    bgGradient: 'linear-gradient(135deg, #0f1216 0%, #1a1f26 60%, #0d1013 100%)',
+    borderColor: 'rgba(192,192,192,0.30)',
+    radial: '#c0c0c0',
+    progressGradient: 'linear-gradient(135deg, #9aa0a6 0%, #d8d8d8 50%, #8a8e93 100%)',
+    textAccent: '#d8d8d8',
+    textSoft:   '#c0c0c099',
+    textMute:   '#c0c0c066',
+  },
+  Gold: {
+    bgGradient: 'linear-gradient(135deg, #1a1506 0%, #2d2208 60%, #1a1200 100%)',
+    borderColor: 'rgba(212,175,55,0.3)',
+    radial: '#d4af37',
+    progressGradient: 'linear-gradient(135deg, #c9a227 0%, #f0c040 50%, #b8860b 100%)',
+    textAccent: '#f0c040',
+    textSoft:   '#d4af3799',
+    textMute:   '#d4af3766',
+  },
+  Platinum: {
+    bgGradient: 'linear-gradient(135deg, #0d1218 0%, #1a2230 60%, #0b1016 100%)',
+    borderColor: 'rgba(229,228,226,0.32)',
+    radial: '#e5e4e2',
+    progressGradient: 'linear-gradient(135deg, #b8c1cf 0%, #e5e4e2 50%, #9aa4b3 100%)',
+    textAccent: '#e5e4e2',
+    textSoft:   '#e5e4e299',
+    textMute:   '#e5e4e266',
+  },
+};
+
 function RewardsCard({ currentUser }) {
   const tier = tierConfig[currentUser.tier];
+  const theme = TIER_THEME[currentUser.tier] ?? TIER_THEME.Bronze;
   const nextTier = { Bronze: 'Silver', Silver: 'Gold', Gold: 'Platinum', Platinum: null }[currentUser.tier];
   const nextMin = nextTier ? tierConfig[nextTier].min : null;
   const progress = nextMin
@@ -20,15 +61,17 @@ function RewardsCard({ currentUser }) {
 
   return (
     <div className="relative overflow-hidden rounded-2xl p-6 mb-6"
-      style={{ background: 'linear-gradient(135deg, #1a1506 0%, #2d2208 60%, #1a1200 100%)', border: '1px solid rgba(212,175,55,0.3)' }}>
+      style={{ background: theme.bgGradient, border: `1px solid ${theme.borderColor}` }}>
       <div className="absolute inset-0 opacity-20"
-        style={{ background: 'radial-gradient(ellipse at 80% 20%, #d4af37 0%, transparent 60%)' }} />
+        style={{ background: `radial-gradient(ellipse at 80% 20%, ${theme.radial} 0%, transparent 60%)` }} />
       <div className="relative z-10">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <p className="text-xs text-amber-300/70 uppercase tracking-widest font-semibold mb-1">Available Rewards</p>
+            <p className="text-xs uppercase tracking-widest font-semibold mb-1" style={{ color: theme.textSoft }}>
+              Available Rewards
+            </p>
             <p className="text-5xl font-bold text-white tracking-tight">
-              ${currentUser.rewardsBalance.toFixed(2)}
+              ${Number(currentUser.rewardsBalance ?? 0).toFixed(2)}
             </p>
           </div>
           <div className="flex flex-col items-end gap-1">
@@ -36,28 +79,30 @@ function RewardsCard({ currentUser }) {
               style={{ color: tier.color, background: tier.bg, border: `1px solid ${tier.color}55` }}>
               {currentUser.tier}
             </span>
-            <span className="text-xs text-amber-300/50">Member since {new Date(currentUser.memberSince).getFullYear()}</span>
+            <span className="text-xs" style={{ color: theme.textMute }}>
+              Member since {new Date(currentUser.memberSince).getFullYear()}
+            </span>
           </div>
         </div>
 
-        <p className="text-sm text-amber-300/60 mb-4">
-          Welcome back, <span className="text-amber-200 font-medium">{currentUser.name.split(' ')[0]}</span>
+        <p className="text-sm mb-4" style={{ color: theme.textSoft }}>
+          Welcome back, <span className="font-medium" style={{ color: theme.textAccent }}>{currentUser.name.split(' ')[0]}</span>
         </p>
 
         {nextTier && (
           <div>
-            <div className="flex justify-between text-xs text-amber-300/50 mb-1.5">
-              <span>${currentUser.lifetimeSpend.toFixed(0)} lifetime spend</span>
+            <div className="flex justify-between text-xs mb-1.5" style={{ color: theme.textMute }}>
+              <span>${Number(currentUser.lifetimeSpend ?? 0).toFixed(0)} lifetime spend</span>
               <span>${nextMin} for {nextTier}</span>
             </div>
             <div className="h-1.5 rounded-full bg-black/40">
-              <div className="h-full rounded-full gradient-gold transition-all"
-                style={{ width: `${progress}%` }} />
+              <div className="h-full rounded-full transition-all"
+                style={{ width: `${progress}%`, background: theme.progressGradient }} />
             </div>
           </div>
         )}
         {!nextTier && (
-          <p className="text-xs text-amber-300/60 flex items-center gap-1">
+          <p className="text-xs flex items-center gap-1" style={{ color: theme.textSoft }}>
             <Star size={12} /> You've reached our highest tier
           </p>
         )}
