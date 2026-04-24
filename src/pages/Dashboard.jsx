@@ -50,13 +50,23 @@ const TIER_THEME = {
   },
 };
 
+// Always derive tier from lifetime spend — avoids any stale DB value.
+function computeTierFromSpend(spend = 0) {
+  if (spend >= 1500) return 'Platinum';
+  if (spend >= 600)  return 'Gold';
+  if (spend >= 200)  return 'Silver';
+  return 'Bronze';
+}
+
 function RewardsCard({ currentUser }) {
-  const tier = tierConfig[currentUser.tier];
-  const theme = TIER_THEME[currentUser.tier] ?? TIER_THEME.Bronze;
-  const nextTier = { Bronze: 'Silver', Silver: 'Gold', Gold: 'Platinum', Platinum: null }[currentUser.tier];
+  const lifetimeSpend = Number(currentUser.lifetimeSpend ?? 0);
+  const tierKey = computeTierFromSpend(lifetimeSpend);
+  const tier = tierConfig[tierKey];
+  const theme = TIER_THEME[tierKey] ?? TIER_THEME.Bronze;
+  const nextTier = { Bronze: 'Silver', Silver: 'Gold', Gold: 'Platinum', Platinum: null }[tierKey];
   const nextMin = nextTier ? tierConfig[nextTier].min : null;
   const progress = nextMin
-    ? Math.min((currentUser.lifetimeSpend / nextMin) * 100, 100)
+    ? Math.min((lifetimeSpend / nextMin) * 100, 100)
     : 100;
 
   return (
@@ -77,7 +87,7 @@ function RewardsCard({ currentUser }) {
           <div className="flex flex-col items-end gap-1">
             <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full"
               style={{ color: tier.color, background: tier.bg, border: `1px solid ${tier.color}55` }}>
-              {currentUser.tier}
+              {tierKey}
             </span>
             <span className="text-xs" style={{ color: theme.textMute }}>
               Member since {new Date(currentUser.memberSince).getFullYear()}

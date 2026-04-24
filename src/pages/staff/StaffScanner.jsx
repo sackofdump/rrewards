@@ -113,9 +113,17 @@ function ScanStep({ onCustomerFound, notFound, setNotFound }) {
 
       {shortcutList.length > 0 && (
         <div className="glass rounded-2xl p-4">
-          <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-3">
+          <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2">
             {live ? 'Registered Customers' : 'Demo — tap to simulate scan'}
           </p>
+          {!live && (
+            <div className="rounded-lg bg-violet-500/8 border border-violet-400/20 px-3 py-2 mb-3 flex items-start gap-2">
+              <Sparkles size={11} className="text-violet-400 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-neutral-400 leading-relaxed">
+                In the live version, customers aren't shown in a list — staff must scan the customer's QR code from their Wallet tab.
+              </p>
+            </div>
+          )}
           <div className="space-y-1">
             {shortcutList.map(c => (
               <button key={c.id} onClick={() => handleScan(`rewards:${c.id}`)}
@@ -437,6 +445,15 @@ function CheckoutStep({ customer, restaurantId, onComplete, onBack }) {
             <Star size={11} />
             <span>Customer earns <strong>+${earned.toFixed(2)}</strong> rewards on this order</span>
           </div>
+        </div>
+      )}
+
+      {!isLive() && (
+        <div className="rounded-xl bg-violet-500/8 border border-violet-400/20 px-3 py-2.5 flex items-start gap-2">
+          <Sparkles size={12} className="text-violet-400 shrink-0 mt-0.5" />
+          <p className="text-[11px] text-neutral-400 leading-relaxed">
+            In the live version, tapping complete sends the bill to the customer's device — they pick the tip, sign, and approve on their own phone. Staff just sees confirmation.
+          </p>
         </div>
       )}
 
