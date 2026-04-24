@@ -209,6 +209,7 @@ export default function CustomerDetail() {
   const [adjustAmount, setAdjustAmount] = useState('');
   const [adjustNote, setAdjustNote]     = useState('');
   const [adjustSuccess, setAdjustSuccess] = useState(false);
+  const [adjustError, setAdjustError]     = useState('');
   const [activeTab, setActiveTab] = useState('orders'); // 'orders' | 'info'
   const [showMessage, setShowMessage]     = useState(false);
   const [messageSent, setMessageSent]     = useState(false);
@@ -248,13 +249,62 @@ export default function CustomerDetail() {
     ? customerOrders.reduce((s, o) => s + o.total, 0) / customerOrders.length
     : 0;
 
-  function handleAdjust(dir) {
+  const DAILY_ADJUST_LIMIT = 100; // $/customer/day for positive manual grants
+
+  // Sum of positive manual adjustments to this customer today
+  function getTodayAddsForCustomer() {
+    const today = new Date().toISOString().split('T')[0];
+    // Combine orders and activity log adjustments by target
+    // We store adjustments in the activity log; fetch from there
+    // (sync approximation using already-loaded entries)
+    try {
+      const stored = localStorage.getItem(isLive() ? 'rr_activity_log_live' : 'rr_activity_log');
+      const list = stored ? JSON.parse(stored) : [];
+      return list
+        .filter(e =>
+          e.action === 'customer.adjust' &&
+          e.targetId === customer.id &&
+          e.amount > 0 &&
+          (e.createdAt ?? '').startsWith(today)
+        )
+        .reduce((s, e) => s + e.amount, 0);
+    } catch { return 0; }
+  }
+
+  async function handleAdjust(dir) {
     const amt = parseFloat(adjustAmount);
     if (!amt || isNaN(amt)) return;
     const delta = dir === 'add' ? amt : -amt;
+
+    // Enforce daily limit on positive adjustments
+    if (delta > 0) {
+      // For live mode, query Supabase to be authoritative
+      let todayAdded = 0;
+      if (isLive()) {
+        const { data } = await supabase
+          .from('activity_log')
+          .select('amount, created_at')
+          .eq('action', 'customer.adjust')
+          .eq('target_id', customer.id)
+          .gt('amount', 0)
+          .gte('created_at', new Date().toISOString().split('T')[0]);
+        todayAdded = (data ?? []).reduce((s, e) => s + Number(e.amount ?? 0), 0);
+      } else {
+        todayAdded = getTodayAddsForCustomer();
+      }
+      if (todayAdded + delta > DAILY_ADJUST_LIMIT) {
+        const remaining = Math.max(0, DAILY_ADJUST_LIMIT - todayAdded);
+        setAdjustError(
+          `Daily limit reached: $${todayAdded.toFixed(2)} already added to this customer today (limit $${DAILY_ADJUST_LIMIT}). ` +
+          (remaining > 0 ? `You can still add up to $${remaining.toFixed(2)}.` : 'Try again tomorrow.')
+        );
+        setTimeout(() => setAdjustError(''), 5000);
+        return;
+      }
+    }
+
     const previousBalance = customer.rewardsBalance;
     const nextBalance = Math.max(0, previousBalance + delta);
-    // Use absolute set so we can clamp at 0
     setStat(customer.id, { rewardsBalance: nextBalance });
     logAction({
       actorId: actor?.id ?? 'unknown',
@@ -429,6 +479,15 @@ export default function CustomerDetail() {
                 <Check size={12} /> Rewards balance updated
               </div>
             )}
+            {adjustError && (
+              <div className="flex items-start gap-2 mt-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 leading-relaxed">
+                <Ban size={12} className="shrink-0 mt-0.5" />
+                {adjustError}
+              </div>
+            )}
+            <p className="text-[10px] text-neutral-600 mt-2">
+              Policy: up to $100 of manual adds per customer per day.
+            </p>
           </div>
 
           <div className="glass rounded-2xl p-4">

@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Eye, EyeOff, Mail, Lock, AlertCircle,
-  Utensils, Shield, User
+  Utensils, Shield, User, ChefHat
 } from 'lucide-react';
 
 const ROLE_OPTIONS = [
@@ -41,7 +41,7 @@ export default function SignIn() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-2xl gradient-gold flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-900/30">
-            <span className="text-2xl font-black text-black">R</span>
+            <ChefHat size={28} strokeWidth={2.5} className="text-black" />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Restaurant Rewards</h1>
           <p className="text-sm text-neutral-500 mt-1">Sign in to your account</p>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { isLive, keyFor } from '../utils/sessionMode';
+import { supabase } from '../lib/supabase';
 
 const BASE_KEY = 'rr_notifications';
 
@@ -53,54 +54,134 @@ const DEFAULT_NOTIFICATIONS = [
     id: 6,
     userId: 'u002',
     type: 'welcome',
-    title: 'Welcome to Rewards!',
+    title: 'Welcome to Restaurant Rewards!',
     body: 'Thanks for joining — you earn 3% back on every visit.',
     createdAt: '2025-01-03T12:00',
     read: true,
   },
 ];
 
-function load() {
+function rowToNotif(r) {
+  return {
+    id: r.id,
+    userId: r.user_id,
+    type: r.type,
+    title: r.title,
+    body: r.body,
+    read: Boolean(r.read),
+    createdAt: r.created_at,
+  };
+}
+
+function loadLocal() {
   try {
     const stored = localStorage.getItem(keyFor(BASE_KEY));
     if (stored) return JSON.parse(stored);
     return isLive() ? [] : DEFAULT_NOTIFICATIONS;
   } catch { return isLive() ? [] : DEFAULT_NOTIFICATIONS; }
 }
-function save(items) {
+function saveLocal(items) {
   try { localStorage.setItem(keyFor(BASE_KEY), JSON.stringify(items)); }
   catch { /* ignore */ }
 }
 
-export function useNotifications(userId) {
-  const [all, setAll] = useState(load);
+let listeners = [];
+function notifyLocal() { listeners.forEach(fn => fn()); }
 
-  useEffect(() => { save(all); }, [all]);
+export function useNotifications(userId) {
+  const live = isLive();
+  const [all, setAll] = useState(() => live ? [] : loadLocal());
+
+  useEffect(() => {
+    function onChange() { if (!live) setAll(loadLocal()); }
+    listeners.push(onChange);
+    return () => { listeners = listeners.filter(l => l !== onChange); };
+  }, [live]);
+
+  useEffect(() => {
+    if (!live) return;
+    let cancelled = false;
+    async function fetchAll() {
+      const { data } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!cancelled && data) setAll(data.map(rowToNotif));
+    }
+    fetchAll();
+    const ch = supabase
+      .channel('notifications_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' },
+        () => fetchAll())
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, [live]);
 
   const forUser = userId ? all.filter(n => n.userId === userId) : all;
   const unreadCount = forUser.filter(n => !n.read).length;
 
-  function markRead(id) {
-    setAll(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  async function markRead(id) {
+    if (live) {
+      await supabase.from('notifications').update({ read: true }).eq('id', id);
+      setAll(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      return;
+    }
+    const next = loadLocal().map(n => n.id === id ? { ...n, read: true } : n);
+    saveLocal(next);
+    notifyLocal();
   }
-  function markAllRead() {
-    setAll(prev => prev.map(n => forUser.some(f => f.id === n.id) ? { ...n, read: true } : n));
+  async function markAllRead() {
+    if (live) {
+      const ids = forUser.filter(n => !n.read).map(n => n.id);
+      if (ids.length > 0) {
+        await supabase.from('notifications').update({ read: true }).in('id', ids);
+      }
+      setAll(prev => prev.map(n => ids.includes(n.id) ? { ...n, read: true } : n));
+      return;
+    }
+    const targets = new Set(forUser.map(n => n.id));
+    const next = loadLocal().map(n => targets.has(n.id) ? { ...n, read: true } : n);
+    saveLocal(next);
+    notifyLocal();
   }
-  function addNotification(data) {
+  async function addNotification(data) {
+    if (live) {
+      const row = {
+        user_id: data.userId,
+        type: data.type,
+        title: data.title,
+        body: data.body ?? null,
+        read: false,
+      };
+      const { data: inserted } = await supabase.from('notifications').insert(row).select().single();
+      if (inserted) setAll(prev => [rowToNotif(inserted), ...prev]);
+      return inserted ? rowToNotif(inserted) : null;
+    }
     const newN = {
       id: Date.now(),
       read: false,
       createdAt: new Date().toISOString(),
       ...data,
     };
-    setAll(prev => [newN, ...prev]);
+    const next = [newN, ...loadLocal()];
+    saveLocal(next);
+    notifyLocal();
     return newN;
   }
-  function removeNotification(id) {
-    setAll(prev => prev.filter(n => n.id !== id));
+  async function removeNotification(id) {
+    if (live) {
+      await supabase.from('notifications').delete().eq('id', id);
+      setAll(prev => prev.filter(n => n.id !== id));
+      return;
+    }
+    const next = loadLocal().filter(n => n.id !== id);
+    saveLocal(next);
+    notifyLocal();
   }
   function resetNotifications() {
-    setAll(DEFAULT_NOTIFICATIONS);
+    if (live) return;
+    saveLocal(DEFAULT_NOTIFICATIONS);
+    notifyLocal();
   }
 
   return {

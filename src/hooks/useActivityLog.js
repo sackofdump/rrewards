@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { isLive, keyFor } from '../utils/sessionMode';
+import { supabase } from '../lib/supabase';
 
 const BASE_KEY = 'rr_activity_log';
 
@@ -22,105 +23,72 @@ const DEFAULT_LOG = [
   },
 ];
 
-function load() {
+function rowToEntry(r) {
+  return {
+    id: r.id,
+    actorId: r.actor_id,
+    actorName: r.actor_name,
+    actorRole: r.actor_role,
+    action: r.action,
+    targetId: r.target_id,
+    targetName: r.target_name,
+    amount: r.amount != null ? Number(r.amount) : null,
+    details: r.details ?? {},
+    anomaly: r.anomaly,
+    read: Boolean(r.read),
+    createdAt: r.created_at,
+  };
+}
+
+function loadLocal() {
   try {
     const stored = localStorage.getItem(keyFor(BASE_KEY));
     if (stored) return JSON.parse(stored);
     return isLive() ? [] : DEFAULT_LOG;
   } catch { return isLive() ? [] : DEFAULT_LOG; }
 }
-function save(items) {
+function saveLocal(items) {
   try { localStorage.setItem(keyFor(BASE_KEY), JSON.stringify(items)); }
   catch { /* ignore */ }
 }
 
-// Dev admin needs visibility into BOTH environments.
-function loadBothEnvs() {
-  const demo = (() => {
-    try {
-      const stored = localStorage.getItem(BASE_KEY);
-      return stored ? JSON.parse(stored) : DEFAULT_LOG;
-    } catch { return DEFAULT_LOG; }
-  })();
-  const live = (() => {
-    try {
-      const stored = localStorage.getItem(`${BASE_KEY}_live`);
-      return stored ? JSON.parse(stored) : [];
-    } catch { return []; }
-  })();
-  // Tag entries with the environment they came from
-  const tagged = [
-    ...demo.map(e => ({ ...e, env: 'demo' })),
-    ...live.map(e => ({ ...e, env: 'live' })),
-  ];
-  return tagged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-}
-
-/* ── Anomaly detection ───────────────────────────────────────────── */
+/* Detect anomaly heuristics */
 function detectAnomaly(entry, recentEntries) {
   const oneHourMs = 60 * 60 * 1000;
   const now = new Date(entry.createdAt);
 
   if (entry.action === 'reward.apply') {
-    // Rewards are earned on the pre-tax subtotal — compare to that, not
-    // the final total (which can be artificially low if the customer
-    // redeemed their balance against this purchase).
     const { subtotal = 0, orderTotal = 0, rewardAmount = 0 } = entry.details || {};
     const basis = subtotal > 0 ? subtotal : orderTotal;
     if (basis > 0) {
       const ratio = rewardAmount / basis;
-      if (ratio > 0.15) {
-        return {
-          level: 'critical',
-          reason: `Reward ratio ${(ratio * 100).toFixed(1)}% — way above the standard 3%`,
-        };
-      }
-      if (ratio > 0.08) {
-        return {
-          level: 'warning',
-          reason: `Reward ratio ${(ratio * 100).toFixed(1)}% — above the standard 3%`,
-        };
-      }
+      if (ratio > 0.15) return { level: 'critical', reason: `Reward ratio ${(ratio * 100).toFixed(1)}% — way above the standard 3%` };
+      if (ratio > 0.08) return { level: 'warning',  reason: `Reward ratio ${(ratio * 100).toFixed(1)}% — above the standard 3%` };
     }
-    if (rewardAmount > 50) {
-      return { level: 'warning', reason: `Large single-transaction reward: $${rewardAmount.toFixed(2)}` };
-    }
-    // Velocity: too many rewards in a short window by same staff
+    if (rewardAmount > 50) return { level: 'warning', reason: `Large single-transaction reward: $${rewardAmount.toFixed(2)}` };
+
     const recentByActor = recentEntries.filter(e =>
       e.actorId === entry.actorId &&
       e.action === 'reward.apply' &&
       (now - new Date(e.createdAt)) < oneHourMs
     );
     if (recentByActor.length >= 10) {
-      return {
-        level: 'warning',
-        reason: `${recentByActor.length + 1} rewards issued in the last hour by ${entry.actorName}`,
-      };
+      return { level: 'warning', reason: `${recentByActor.length + 1} rewards issued in the last hour by ${entry.actorName}` };
     }
   }
 
   if (entry.action === 'customer.adjust') {
     const amt = Math.abs(entry.amount ?? 0);
-    // Tighter thresholds — any meaningful manual grant is worth surfacing
-    if (amt >= 100) {
-      return { level: 'critical', reason: `Large manual balance adjustment: $${amt.toFixed(2)}` };
-    }
-    if (amt >= 50) {
-      return { level: 'warning', reason: `Sizeable manual adjustment: $${amt.toFixed(2)}` };
-    }
-    if (amt >= 20) {
-      return { level: 'warning', reason: `Manual adjustment: $${amt.toFixed(2)}` };
-    }
+    if (amt >= 100) return { level: 'critical', reason: `Large manual balance adjustment: $${amt.toFixed(2)}` };
+    if (amt >= 50)  return { level: 'warning',  reason: `Sizeable manual adjustment: $${amt.toFixed(2)}` };
+    if (amt >= 20)  return { level: 'warning',  reason: `Manual adjustment: $${amt.toFixed(2)}` };
     const recentAdjusts = recentEntries.filter(e =>
       e.actorId === entry.actorId &&
       e.action === 'customer.adjust' &&
       (now - new Date(e.createdAt)) < oneHourMs
     );
     if (recentAdjusts.length >= 5) {
-      return {
-        level: 'critical',
-        reason: `Rapid manual adjustments — ${recentAdjusts.length + 1} in the last hour`,
-      };
+      return { level: 'critical', reason: `Rapid manual adjustments — ${recentAdjusts.length + 1} in the last hour` };
     }
   }
 
@@ -128,12 +96,10 @@ function detectAnomaly(entry, recentEntries) {
     const { key, oldValue, newValue } = entry.details || {};
     if (key === 'rewardRate') {
       const change = Math.abs((newValue ?? 0) - (oldValue ?? 0));
-      if (change > 0.05) {
-        return {
-          level: 'critical',
-          reason: `Reward rate changed by ${(change * 100).toFixed(1)} points (${(oldValue * 100).toFixed(1)}% → ${(newValue * 100).toFixed(1)}%)`,
-        };
-      }
+      if (change > 0.05) return {
+        level: 'critical',
+        reason: `Reward rate changed by ${(change * 100).toFixed(1)} points (${(oldValue * 100).toFixed(1)}% → ${(newValue * 100).toFixed(1)}%)`,
+      };
     }
   }
 
@@ -144,110 +110,203 @@ function detectAnomaly(entry, recentEntries) {
       (now - new Date(e.createdAt)) < oneHourMs
     );
     if (recentDeactivations.length >= 3) {
-      return {
-        level: 'warning',
-        reason: `${recentDeactivations.length + 1} customer deactivations in the last hour`,
-      };
+      return { level: 'warning', reason: `${recentDeactivations.length + 1} customer deactivations in the last hour` };
     }
   }
 
   return null;
 }
 
-/* ── Module-level subscription (so all hook consumers stay in sync) ─ */
 let listeners = [];
-function notify() { listeners.forEach(fn => fn()); }
+function notifyLocal() { listeners.forEach(fn => fn()); }
 
+/* ── Manager / staff view (useActivityLog) ──────────────────── */
 export function useActivityLog() {
-  const [entries, setEntries] = useState(load);
+  const live = isLive();
+  const [entries, setEntries] = useState(() => live ? [] : loadLocal());
 
   useEffect(() => {
-    function onChange() { setEntries(load()); }
+    function onChange() { if (!live) setEntries(loadLocal()); }
     listeners.push(onChange);
     return () => { listeners = listeners.filter(l => l !== onChange); };
-  }, []);
+  }, [live]);
 
-  const logAction = useCallback((data) => {
-    const next = load();
-    const baseEntry = {
-      id: Date.now() + Math.floor(Math.random() * 1000),
+  useEffect(() => {
+    if (!live) return;
+    let cancelled = false;
+    async function fetchLog() {
+      const { data } = await supabase
+        .from('activity_log')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(500);
+      if (!cancelled && data) setEntries(data.map(rowToEntry));
+    }
+    fetchLog();
+    const ch = supabase
+      .channel('activity_log_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'activity_log' },
+        () => fetchLog())
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, [live]);
+
+  const logAction = useCallback(async (data) => {
+    const base = {
       createdAt: new Date().toISOString(),
       read: false,
       ...data,
     };
-    const anomaly = detectAnomaly(baseEntry, next);
-    const entry = { ...baseEntry, anomaly };
-    const updated = [entry, ...next].slice(0, 500); // keep last 500
-    save(updated);
-    notify();
-  }, []);
+    // Fetch recent to detect anomalies
+    const recent = live
+      ? (await supabase.from('activity_log').select('*').order('created_at', { ascending: false }).limit(50)).data?.map(rowToEntry) ?? []
+      : loadLocal();
+    const anomaly = detectAnomaly(base, recent);
+    const entry = { ...base, anomaly };
 
-  const markRead = useCallback((id) => {
-    const next = load().map(e => e.id === id ? { ...e, read: true } : e);
-    save(next);
-    notify();
-  }, []);
+    if (live) {
+      const row = {
+        actor_id: entry.actorId ?? null,
+        actor_name: entry.actorName ?? null,
+        actor_role: entry.actorRole ?? null,
+        action: entry.action,
+        target_id: entry.targetId ?? null,
+        target_name: entry.targetName ?? null,
+        amount: entry.amount ?? null,
+        details: entry.details ?? {},
+        anomaly: entry.anomaly,
+        read: false,
+      };
+      await supabase.from('activity_log').insert(row);
+    } else {
+      entry.id = Date.now() + Math.floor(Math.random() * 1000);
+      const updated = [entry, ...loadLocal()].slice(0, 500);
+      saveLocal(updated);
+      notifyLocal();
+    }
+  }, [live]);
 
-  const markAllRead = useCallback(() => {
-    const next = load().map(e => e.anomaly ? { ...e, read: true } : e);
-    save(next);
-    notify();
-  }, []);
+  const markRead = useCallback(async (id) => {
+    if (live) {
+      await supabase.from('activity_log').update({ read: true }).eq('id', id);
+      setEntries(prev => prev.map(e => e.id === id ? { ...e, read: true } : e));
+      return;
+    }
+    const next = loadLocal().map(e => e.id === id ? { ...e, read: true } : e);
+    saveLocal(next);
+    notifyLocal();
+  }, [live]);
+
+  const markAllRead = useCallback(async () => {
+    if (live) {
+      await supabase.from('activity_log').update({ read: true }).eq('read', false);
+      setEntries(prev => prev.map(e => e.anomaly ? { ...e, read: true } : e));
+      return;
+    }
+    const next = loadLocal().map(e => e.anomaly ? { ...e, read: true } : e);
+    saveLocal(next);
+    notifyLocal();
+  }, [live]);
 
   return { entries, logAction, markRead, markAllRead };
 }
 
-/* Mark an entry as read across either environment (dev needs this since
-   its alerts can come from either demo or live storage). */
-function markReadAcrossEnvs(id) {
-  ['', '_live'].forEach(suffix => {
-    const key = `${BASE_KEY}${suffix}`;
-    try {
-      const stored = localStorage.getItem(key);
-      if (!stored) return;
-      const list = JSON.parse(stored);
-      let changed = false;
-      const next = list.map(e => {
-        if (e.id === id && !e.read) { changed = true; return { ...e, read: true }; }
-        return e;
-      });
-      if (changed) localStorage.setItem(key, JSON.stringify(next));
-    } catch { /* ignore */ }
-  });
-}
-
-function markAllReadAcrossEnvs() {
-  ['', '_live'].forEach(suffix => {
-    const key = `${BASE_KEY}${suffix}`;
-    try {
-      const stored = localStorage.getItem(key);
-      if (!stored) return;
-      const list = JSON.parse(stored);
-      const next = list.map(e => e.anomaly ? { ...e, read: true } : e);
-      localStorage.setItem(key, JSON.stringify(next));
-    } catch { /* ignore */ }
-  });
-}
-
-/* Hook for dev — returns entries from BOTH demo and live environments,
-   tagged with { env: 'demo' | 'live' }. */
+/* ── Dev view — reads from BOTH demo localStorage and Supabase live ─ */
 export function useAllActivityLogs() {
-  const [entries, setEntries] = useState(loadBothEnvs);
+  const [entries, setEntries] = useState([]);
 
   useEffect(() => {
-    function onChange() { setEntries(loadBothEnvs()); }
+    let cancelled = false;
+
+    async function fetchAll() {
+      // Demo log from localStorage
+      const demoLog = (() => {
+        try {
+          const stored = localStorage.getItem(BASE_KEY);
+          return stored ? JSON.parse(stored) : DEFAULT_LOG;
+        } catch { return DEFAULT_LOG; }
+      })().map(e => ({ ...e, env: 'demo' }));
+
+      // Legacy live from localStorage
+      const legacyLive = (() => {
+        try {
+          const stored = localStorage.getItem(`${BASE_KEY}_live`);
+          return stored ? JSON.parse(stored) : [];
+        } catch { return []; }
+      })().map(e => ({ ...e, env: 'live' }));
+
+      // Supabase live
+      let supabaseLive = [];
+      try {
+        const { data } = await supabase
+          .from('activity_log')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(500);
+        if (data) supabaseLive = data.map(r => ({ ...rowToEntry(r), env: 'live' }));
+      } catch { /* ignore */ }
+
+      const merged = [...demoLog, ...legacyLive, ...supabaseLive]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      if (!cancelled) setEntries(merged);
+    }
+
+    fetchAll();
+    function onChange() { fetchAll(); }
     listeners.push(onChange);
-    return () => { listeners = listeners.filter(l => l !== onChange); };
+
+    const ch = supabase
+      .channel('dev_activity_log')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'activity_log' },
+        () => fetchAll())
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      listeners = listeners.filter(l => l !== onChange);
+      supabase.removeChannel(ch);
+    };
   }, []);
 
-  function markRead(id) {
-    markReadAcrossEnvs(id);
-    notify();
+  async function markRead(id) {
+    // Try Supabase first (numeric ID)
+    if (typeof id === 'number' || !isNaN(Number(id))) {
+      try {
+        await supabase.from('activity_log').update({ read: true }).eq('id', id);
+      } catch { /* ignore */ }
+    }
+    // Also update both localStorage keys
+    ['', '_live'].forEach(suffix => {
+      const key = `${BASE_KEY}${suffix}`;
+      try {
+        const stored = localStorage.getItem(key);
+        if (!stored) return;
+        const list = JSON.parse(stored);
+        const next = list.map(e => e.id === id ? { ...e, read: true } : e);
+        localStorage.setItem(key, JSON.stringify(next));
+      } catch { /* ignore */ }
+    });
+    notifyLocal();
+    setEntries(prev => prev.map(e => e.id === id ? { ...e, read: true } : e));
   }
 
-  function markAllRead() {
-    markAllReadAcrossEnvs();
-    notify();
+  async function markAllRead() {
+    try {
+      await supabase.from('activity_log').update({ read: true }).eq('read', false);
+    } catch { /* ignore */ }
+    ['', '_live'].forEach(suffix => {
+      const key = `${BASE_KEY}${suffix}`;
+      try {
+        const stored = localStorage.getItem(key);
+        if (!stored) return;
+        const list = JSON.parse(stored);
+        const next = list.map(e => e.anomaly ? { ...e, read: true } : e);
+        localStorage.setItem(key, JSON.stringify(next));
+      } catch { /* ignore */ }
+    });
+    notifyLocal();
+    setEntries(prev => prev.map(e => e.anomaly ? { ...e, read: true } : e));
   }
 
   return { entries, markRead, markAllRead };

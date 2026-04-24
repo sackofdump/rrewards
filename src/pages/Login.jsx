@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { User, Utensils, Shield, ChevronRight, Terminal } from 'lucide-react';
+import { User, Utensils, Shield, ChevronRight, Terminal, ChefHat } from 'lucide-react';
 
 const DEMO_LOGINS = [
   {
@@ -58,7 +58,7 @@ export default function Login() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
           <div className="w-14 h-14 rounded-2xl gradient-gold flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-900/30">
-            <span className="text-2xl font-black text-black">R</span>
+            <ChefHat size={28} strokeWidth={2.5} className="text-black" />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Restaurant Rewards</h1>
           <p className="text-sm text-neutral-500 mt-1">Select an account to continue</p>

@@ -225,7 +225,7 @@ export default function Restaurants() {
   return (
     <div className="px-4 pt-6 pb-8 max-w-lg mx-auto">
       <div className="mb-6">
-        <p className="text-xs text-neutral-500 uppercase tracking-widest font-medium mb-1">Rewards Group</p>
+        <p className="text-xs text-neutral-500 uppercase tracking-widest font-medium mb-1">Restaurant Group</p>
         <h1 className="text-2xl font-bold text-white tracking-tight">Restaurants</h1>
       </div>
 

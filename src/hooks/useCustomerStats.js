@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { adminCustomers } from '../data/mockData';
 import { isLive, keyFor } from '../utils/sessionMode';
+import { supabase } from '../lib/supabase';
 
 const STATS_BASE = 'rr_customer_stats';
 const REGISTERED_KEY = 'rr_registered_users';
@@ -15,11 +16,6 @@ function saveOverrides(overrides) {
   try { localStorage.setItem(keyFor(STATS_BASE), JSON.stringify(overrides)); }
   catch { /* ignore */ }
 }
-
-function demoCustomers() {
-  // In live mode, hide the hardcoded demo customers entirely.
-  return isLive() ? [] : adminCustomers;
-}
 function loadRegistered() {
   try {
     const stored = localStorage.getItem(REGISTERED_KEY);
@@ -31,11 +27,12 @@ function saveRegistered(items) {
   catch { /* ignore */ }
 }
 
-let listeners = [];
-function notify() { listeners.forEach(fn => fn()); }
+function demoCustomers() {
+  return isLive() ? [] : adminCustomers;
+}
 
-/* Get current (live) stats for any customer id: registered user first,
-   then demo customer, with localStorage overrides applied on top. */
+// Synchronous lookup — demo customers, legacy registered, overrides.
+// Supabase-backed customers are hydrated by caller.
 export function getCustomerStats(customerId) {
   const registered = loadRegistered().find(u => u.id === customerId);
   if (registered) return registered;
@@ -47,8 +44,11 @@ export function getCustomerStats(customerId) {
   return { ...demo, ...override };
 }
 
+let listeners = [];
+function notify() { listeners.forEach(fn => fn()); }
+
 export function useCustomerStats() {
-  const [tick, setTick] = useState(0); // re-render trigger
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     function onChange() { setTick(t => t + 1); }
@@ -61,6 +61,45 @@ export function useCustomerStats() {
   }
 
   function applyDelta(customerId, patch) {
+    // Supabase-backed customer: fire-and-forget update via RPC-like logic
+    if (isLive()) {
+      (async () => {
+        const { data: current } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', customerId)
+          .maybeSingle();
+        if (!current) return fallbackLocalApply(customerId, patch);
+
+        const merged = { ...current };
+        for (const [k, v] of Object.entries(patch)) {
+          const col = camelToSnake(k);
+          if (typeof v === 'number' && typeof current[col] === 'number') {
+            merged[col] = Number(current[col]) + v;
+          } else if (v === null || v === undefined) {
+            /* skip */
+          } else {
+            merged[col] = v;
+          }
+        }
+        merged.tier = computeTier(merged.lifetime_spend);
+        await supabase.from('profiles').update({
+          rewards_balance: merged.rewards_balance,
+          lifetime_spend:  merged.lifetime_spend,
+          lifetime_earned: merged.lifetime_earned,
+          orders_count:    merged.orders_count,
+          last_visit:      merged.last_visit,
+          status:          merged.status,
+          tier:            merged.tier,
+        }).eq('id', customerId);
+        notify();
+      })();
+      return;
+    }
+    return fallbackLocalApply(customerId, patch);
+  }
+
+  function fallbackLocalApply(customerId, patch) {
     const registered = loadRegistered();
     const regIdx = registered.findIndex(u => u.id === customerId);
     if (regIdx !== -1) {
@@ -73,15 +112,12 @@ export function useCustomerStats() {
           next[k] = v;
         }
       }
-      // Tier recalc based on lifetimeSpend
       next.tier = computeTier(next.lifetimeSpend);
       registered[regIdx] = next;
       saveRegistered(registered);
       notify();
       return next;
     }
-
-    // Demo customer — store as override
     const overrides = loadOverrides();
     const demo = demoCustomers().find(c => c.id === customerId);
     if (!demo) return null;
@@ -102,7 +138,22 @@ export function useCustomerStats() {
   }
 
   function setStat(customerId, patch) {
-    // Absolute set, not delta
+    // Absolute set (not delta).
+    if (isLive()) {
+      (async () => {
+        const snakePatch = {};
+        for (const [k, v] of Object.entries(patch)) {
+          snakePatch[camelToSnake(k)] = v;
+        }
+        if (snakePatch.lifetime_spend != null) {
+          snakePatch.tier = computeTier(snakePatch.lifetime_spend);
+        }
+        await supabase.from('profiles').update(snakePatch).eq('id', customerId);
+        notify();
+      })();
+      return;
+    }
+    // Legacy local path
     const registered = loadRegistered();
     const regIdx = registered.findIndex(u => u.id === customerId);
     if (regIdx !== -1) {
@@ -115,7 +166,6 @@ export function useCustomerStats() {
     }
     const overrides = loadOverrides();
     overrides[customerId] = { ...(overrides[customerId] || {}), ...patch };
-    // Recalc tier if lifetimeSpend in patch
     const demo = demoCustomers().find(c => c.id === customerId);
     if (demo) {
       const combined = { ...demo, ...overrides[customerId] };
@@ -148,4 +198,24 @@ function computeTier(lifetimeSpend = 0) {
   if (lifetimeSpend >= 600)  return 'Gold';
   if (lifetimeSpend >= 200)  return 'Silver';
   return 'Bronze';
+}
+
+function camelToSnake(k) {
+  const map = {
+    rewardsBalance:  'rewards_balance',
+    lifetimeSpend:   'lifetime_spend',
+    lifetimeEarned:  'lifetime_earned',
+    orders:          'orders_count',
+    lastVisit:       'last_visit',
+    status:          'status',
+    tier:            'tier',
+    name:            'name',
+    email:           'email',
+    phone:           'phone',
+    birthday:        'birthday',
+    birthdaySet:     'birthday_set',
+    referralCode:    'referral_code',
+    memberSince:     'member_since',
+  };
+  return map[k] ?? k;
 }
