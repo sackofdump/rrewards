@@ -87,6 +87,7 @@ export function useIncomingCheckout(customerId) {
 /* ── Staff side — create pending tx + watch for customer approval ── */
 export function useOutgoingCheckout() {
   const [pending, setPending] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!pending?.id) return;
@@ -105,6 +106,7 @@ export function useOutgoingCheckout() {
     customerId, restaurantId, staffId, staffName,
     items, subtotal, tax, earned,
   }) => {
+    setError(null);
     const row = {
       customer_id: customerId,
       restaurant_id: restaurantId,
@@ -115,12 +117,16 @@ export function useOutgoingCheckout() {
       total: subtotal + tax,
       status: 'awaiting_customer',
     };
-    const { data, error } = await supabase
+    const { data, error: insErr } = await supabase
       .from('pending_transactions')
       .insert(row)
       .select()
       .single();
-    if (error) { console.error('send failed', error); return null; }
+    if (insErr) {
+      console.error('send failed', insErr);
+      setError(insErr.message || 'Failed to send bill');
+      return null;
+    }
     const p = rowToPending(data);
     setPending(p);
     return p;
@@ -141,7 +147,7 @@ export function useOutgoingCheckout() {
     setPending(null);
   }, [pending?.id]);
 
-  const reset = useCallback(() => setPending(null), []);
+  const reset = useCallback(() => { setPending(null); setError(null); }, []);
 
-  return { pending, send, markCompleted, cancel, reset };
+  return { pending, error, send, markCompleted, cancel, reset };
 }

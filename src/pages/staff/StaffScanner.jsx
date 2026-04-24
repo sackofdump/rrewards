@@ -499,7 +499,7 @@ function ReceiptStep({ customer, tx, onNext }) {
 function LiveHandoffStep({ customer, restaurantId, staff, onFinalized, onBack }) {
   const { items: allMenuItems } = useMenuStore();
   const { rewardRate, taxRate } = useSettings();
-  const { pending, send, markCompleted, cancel, reset } = useOutgoingCheckout();
+  const { pending, error: sendError, send, markCompleted, cancel, reset } = useOutgoingCheckout();
 
   const [cart, setCart] = useState([]);
   const [activeCategory, setActiveCategory] = useState('All');
@@ -669,6 +669,16 @@ function LiveHandoffStep({ customer, restaurantId, staff, onFinalized, onBack })
             </div>
             <p className="text-[11px] text-neutral-600 italic">
               Tip and redeem happen on the customer's device.
+            </p>
+          </div>
+        )}
+
+        {sendError && (
+          <div className="rounded-xl bg-red-500/10 border border-red-500/25 px-4 py-3 text-sm text-red-400 leading-relaxed">
+            <p className="font-semibold">Failed to send bill:</p>
+            <p className="mt-1 text-xs">{sendError}</p>
+            <p className="mt-2 text-[11px] text-red-300/70">
+              Make sure the <span className="font-mono">pending_transactions</span> table exists in Supabase.
             </p>
           </div>
         )}
