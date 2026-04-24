@@ -123,6 +123,33 @@ create table if not exists public.favorites (
 );
 create index if not exists fav_user_idx on public.favorites(user_id);
 
+-- ── Pending transactions (staff → customer handoff) ──────────────
+create table if not exists public.pending_transactions (
+  id             bigserial primary key,
+  customer_id    uuid references public.profiles(id) on delete cascade,
+  restaurant_id  integer not null,
+  staff_id       text,
+  staff_name     text,
+  items          jsonb not null default '[]',
+  subtotal       numeric not null default 0,
+  tax            numeric not null default 0,
+  tip            numeric default 0,
+  total          numeric default 0,
+  redeem_amt     numeric default 0,
+  redeem_on      boolean default false,
+  earned         numeric default 0,
+  signature      text,
+  status         text default 'awaiting_customer',
+  final_order_id bigint,
+  created_at     timestamptz default now(),
+  updated_at     timestamptz default now()
+);
+alter table public.pending_transactions enable row level security;
+create policy "anyone can select pending_tx" on public.pending_transactions for select using (true);
+create policy "anyone can insert pending_tx" on public.pending_transactions for insert with check (true);
+create policy "anyone can update pending_tx" on public.pending_transactions for update using (true);
+create policy "anyone can delete pending_tx" on public.pending_transactions for delete using (true);
+
 -- ── App settings (single row) ─────────────────────────────────────
 create table if not exists public.app_settings (
   id              integer primary key default 1,
@@ -188,3 +215,45 @@ create policy "anyone can delete favorites"      on public.favorites      for de
 
 create policy "anyone can select settings"       on public.app_settings   for select using (true);
 create policy "anyone can update settings"       on public.app_settings   for update using (true);
+
+-- ════════════════════════════════════════════════════════════════════
+--  Atomic profile update — avoids race between back-to-back transactions
+-- ════════════════════════════════════════════════════════════════════
+create or replace function public.apply_profile_delta(
+  p_user_id uuid,
+  p_balance_delta numeric,
+  p_spend_delta numeric,
+  p_earned_delta numeric,
+  p_orders_delta integer,
+  p_last_visit date
+) returns public.profiles as $$
+declare
+  result public.profiles;
+begin
+  update public.profiles set
+    rewards_balance = greatest(0, coalesce(rewards_balance, 0) + p_balance_delta),
+    lifetime_spend  = coalesce(lifetime_spend, 0) + p_spend_delta,
+    lifetime_earned = coalesce(lifetime_earned, 0) + p_earned_delta,
+    orders_count    = coalesce(orders_count, 0) + p_orders_delta,
+    last_visit      = coalesce(p_last_visit, last_visit),
+    tier = case
+      when coalesce(lifetime_spend, 0) + p_spend_delta >= 1500 then 'Platinum'
+      when coalesce(lifetime_spend, 0) + p_spend_delta >= 600  then 'Gold'
+      when coalesce(lifetime_spend, 0) + p_spend_delta >= 200  then 'Silver'
+      else 'Bronze'
+    end
+  where id = p_user_id
+  returning * into result;
+  return result;
+end;
+$$ language plpgsql security definer;
+
+-- ════════════════════════════════════════════════════════════════════
+--  Realtime — enable replication so subscriptions fire
+-- ════════════════════════════════════════════════════════════════════
+alter publication supabase_realtime add table profiles;
+alter publication supabase_realtime add table orders;
+alter publication supabase_realtime add table notifications;
+alter publication supabase_realtime add table activity_log;
+alter publication supabase_realtime add table menu_items;
+alter publication supabase_realtime add table pending_transactions;

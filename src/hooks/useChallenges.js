@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { orders } from '../data/mockData';
+import { useOrderStore } from './useOrderStore';
 
 const STORAGE_KEY = 'rr_challenges';
 
@@ -72,13 +72,14 @@ function computeProgress(challenge, userOrders, monthStart) {
 
 export function useChallenges(userId) {
   const [challenges, setChallenges] = useState(load);
+  const { getByUser } = useOrderStore();
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(challenges)); }
     catch { /* ignore */ }
   }, [challenges]);
 
-  const userOrders = orders.filter(o => o.userId === userId);
+  const userOrders = userId ? getByUser(userId) : [];
   const monthStart = getMonthStart();
 
   const enriched = challenges.map(ch => {

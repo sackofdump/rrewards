@@ -7,12 +7,14 @@ import { useActivityLog } from '../../hooks/useActivityLog';
 import { useOrderStore } from '../../hooks/useOrderStore';
 import { useCustomerStats, getCustomerStats } from '../../hooks/useCustomerStats';
 import { useNotifications } from '../../hooks/useNotifications';
+import { useOutgoingCheckout } from '../../hooks/useCheckoutHandoff';
 import { isLive } from '../../utils/sessionMode';
 import { supabase } from '../../lib/supabase';
 import {
   ScanLine, XCircle, LogOut, ChevronRight,
   CheckCircle, ArrowLeft, Star, Gift, Receipt,
-  Plus, Minus, Trash2, Keyboard, UtensilsCrossed
+  Plus, Minus, Trash2, Keyboard, UtensilsCrossed,
+  X, Sparkles
 } from 'lucide-react';
 
 const QrCameraScanner = lazy(() => import('../../components/QrCameraScanner'));
@@ -148,10 +150,7 @@ function CheckoutStep({ customer, restaurantId, onComplete, onBack }) {
   const { rewardRate, taxRate } = useSettings();
   const [cart, setCart]             = useState([]); // [{ id, name, price, qty }]
   const [manualAmount, setManualAmount] = useState('');
-  // Registered (real) customers can't use manual entry — menu items only
-  // to prevent staff inflating amounts for reward fraud.
-  const manualBlocked = Boolean(customer.supabaseBacked);
-  const [mode, setMode]             = useState(manualBlocked ? 'menu' : 'menu'); // 'menu' | 'manual'
+  const [mode, setMode]             = useState('menu'); // 'menu' | 'manual'
   const [activeCategory, setActiveCategory] = useState('All');
   const [redeemOn, setRedeemOn]     = useState(false);
   const [tipMode, setTipMode]       = useState('pct'); // 'pct' | 'custom' | 'none'
@@ -198,8 +197,6 @@ function CheckoutStep({ customer, restaurantId, onComplete, onBack }) {
 
   function handleComplete() {
     if (!sub) return;
-    // Safety: refuse manual-entry transactions on registered customers
-    if (manualBlocked && mode !== 'menu') return;
     onComplete({
       subtotal: sub,
       tax, tip, earned, redeemAmt, total,
@@ -231,31 +228,20 @@ function CheckoutStep({ customer, restaurantId, onComplete, onBack }) {
         <span>{restaurant?.name ?? 'Unknown location'}</span>
       </div>
 
-      {/* Mode toggle — manual entry locked for registered customers */}
-      {manualBlocked ? (
-        <div className="glass rounded-xl px-4 py-3 flex items-center gap-2.5 text-xs text-neutral-400 leading-relaxed">
-          <UtensilsCrossed size={14} className="text-amber-400 shrink-0" />
-          <span>
-            Registered customer — <span className="text-white font-semibold">menu items only</span>.
-            Manual amount entry is disabled to prevent reward fraud.
-          </span>
-        </div>
-      ) : (
-        <div className="glass rounded-xl p-1 flex">
-          <button onClick={() => setMode('menu')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-              mode === 'menu' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25' : 'text-neutral-500'
-            }`}>
-            <UtensilsCrossed size={13} /> Menu Items
-          </button>
-          <button onClick={() => setMode('manual')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
-              mode === 'manual' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25' : 'text-neutral-500'
-            }`}>
-            <Keyboard size={13} /> Manual Entry
-          </button>
-        </div>
-      )}
+      <div className="glass rounded-xl p-1 flex">
+        <button onClick={() => setMode('menu')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+            mode === 'menu' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25' : 'text-neutral-500'
+          }`}>
+          <UtensilsCrossed size={13} /> Menu Items
+        </button>
+        <button onClick={() => setMode('manual')}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+            mode === 'manual' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/25' : 'text-neutral-500'
+          }`}>
+          <Keyboard size={13} /> Manual Entry
+        </button>
+      </div>
 
       {mode === 'manual' ? (
         <div>
@@ -509,6 +495,256 @@ function ReceiptStep({ customer, tx, onNext }) {
   );
 }
 
+/* ── STEP 2 (LIVE): Build cart + send to customer device ─────────── */
+function LiveHandoffStep({ customer, restaurantId, staff, onFinalized, onBack }) {
+  const { items: allMenuItems } = useMenuStore();
+  const { rewardRate, taxRate } = useSettings();
+  const { pending, send, markCompleted, cancel, reset } = useOutgoingCheckout();
+
+  const [cart, setCart] = useState([]);
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [sending, setSending] = useState(false);
+  const [finalizing, setFinalizing] = useState(false);
+
+  const menuItems = allMenuItems.filter(i => i.restaurantId === restaurantId && i.available);
+  const categoriesInMenu = MENU_CATEGORIES.filter(c => menuItems.some(i => i.category === c));
+  const filteredMenu = activeCategory === 'All'
+    ? menuItems
+    : menuItems.filter(i => i.category === activeCategory);
+
+  const sub = cart.reduce((s, it) => s + it.price * it.qty, 0);
+  const tax = sub * taxRate;
+  const earned = sub * rewardRate;
+
+  function addToCart(item) {
+    setCart(prev => {
+      const existing = prev.find(c => c.id === item.id);
+      if (existing) return prev.map(c => c.id === item.id ? { ...c, qty: c.qty + 1 } : c);
+      return [...prev, { id: item.id, name: item.name, price: item.price, qty: 1 }];
+    });
+  }
+  function changeQty(id, delta) {
+    setCart(prev => prev.map(c => c.id === id ? { ...c, qty: c.qty + delta } : c).filter(c => c.qty > 0));
+  }
+  function removeFromCart(id) {
+    setCart(prev => prev.filter(c => c.id !== id));
+  }
+
+  async function handleSend() {
+    if (!sub) return;
+    setSending(true);
+    await send({
+      customerId: customer.id,
+      restaurantId,
+      staffId: staff?.id,
+      staffName: staff?.name,
+      items: cart,
+      subtotal: sub,
+      tax, earned,
+    });
+    setSending(false);
+  }
+
+  // React to customer approving
+  useEffect(() => {
+    if (pending?.status === 'customer_approved' && !finalizing) {
+      setFinalizing(true);
+      onFinalized(pending).finally(() => {
+        markCompleted();
+      });
+    }
+    if (pending?.status === 'cancelled') {
+      // Customer declined — reset so staff can retry
+      reset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending?.status]);
+
+  // ── State A: Cart builder (no pending yet) ─────────────
+  if (!pending) {
+    return (
+      <div className="space-y-4">
+        <div className="glass rounded-2xl p-4 flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full gradient-gold flex items-center justify-center text-black font-bold text-sm shrink-0">
+            {customer.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-white text-sm">{customer.name}</p>
+            <p className="text-xs mt-0.5" style={{ color: tierConfig[customer.tier]?.color ?? '#aaa' }}>
+              {customer.tier} Member
+            </p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-xs text-neutral-500">Balance</p>
+            <p className="text-base font-bold text-amber-400">${Number(customer.rewardsBalance ?? 0).toFixed(2)}</p>
+          </div>
+        </div>
+
+        <div className="glass rounded-xl px-4 py-3 flex items-start gap-2.5 text-xs text-neutral-400 leading-relaxed">
+          <Sparkles size={14} className="text-amber-400 shrink-0 mt-0.5" />
+          <span>
+            Build the order, then send to <span className="text-white font-semibold">{customer.name}</span> —
+            they'll approve the tip, sign, and pay on their own device.
+          </span>
+        </div>
+
+        {cart.length > 0 && (
+          <div className="glass rounded-2xl p-3 space-y-2">
+            <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 px-1">
+              Order ({cart.reduce((s, c) => s + c.qty, 0)} items)
+            </p>
+            {cart.map(item => (
+              <div key={item.id} className="flex items-center gap-2 bg-neutral-900/60 rounded-xl px-3 py-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white font-medium truncate">{item.name}</p>
+                  <p className="text-xs text-neutral-500">${item.price.toFixed(2)} ea</p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => changeQty(item.id, -1)}
+                    className="w-7 h-7 rounded-lg bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center text-white">
+                    <Minus size={12} />
+                  </button>
+                  <span className="text-sm font-bold text-white w-6 text-center">{item.qty}</span>
+                  <button onClick={() => changeQty(item.id, 1)}
+                    className="w-7 h-7 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/25 flex items-center justify-center text-amber-400">
+                    <Plus size={12} />
+                  </button>
+                </div>
+                <p className="text-sm font-bold text-amber-400 shrink-0 w-16 text-right">
+                  ${(item.price * item.qty).toFixed(2)}
+                </p>
+                <button onClick={() => removeFromCart(item.id)}
+                  className="w-7 h-7 rounded-lg hover:bg-red-500/15 flex items-center justify-center text-neutral-500 hover:text-red-400 shrink-0 transition-colors">
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {menuItems.length === 0 ? (
+          <div className="glass rounded-2xl py-10 flex flex-col items-center gap-2 text-neutral-500 text-sm">
+            <UtensilsCrossed size={28} strokeWidth={1} />
+            <p>No menu items for this restaurant yet.</p>
+            <p className="text-xs text-neutral-600">Add items in Manager → Menu Management</p>
+          </div>
+        ) : (
+          <>
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 -mx-1 px-1">
+              {['All', ...categoriesInMenu].map(cat => (
+                <button key={cat} onClick={() => setActiveCategory(cat)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors shrink-0 ${
+                    activeCategory === cat
+                      ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                      : 'bg-neutral-900 text-neutral-400 border border-white/5'
+                  }`}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {filteredMenu.map(item => (
+                <button key={item.id} onClick={() => addToCart(item)}
+                  className="glass rounded-xl p-3 text-left hover:brightness-110 active:scale-95 transition-all">
+                  <p className="text-sm font-bold text-white leading-tight mb-0.5">{item.name}</p>
+                  {item.description && (
+                    <p className="text-[10px] text-neutral-500 line-clamp-1">{item.description}</p>
+                  )}
+                  <p className="text-sm font-bold text-amber-400 mt-1.5">${item.price.toFixed(2)}</p>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {sub > 0 && (
+          <div className="glass rounded-2xl p-4 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-neutral-400">Subtotal</span>
+              <span className="text-white font-medium">${sub.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-neutral-400">Tax ({(taxRate * 100).toFixed(1).replace(/\.0$/, '')}%)</span>
+              <span className="text-white font-medium">${tax.toFixed(2)}</span>
+            </div>
+            <p className="text-[11px] text-neutral-600 italic">
+              Tip and redeem happen on the customer's device.
+            </p>
+          </div>
+        )}
+
+        <button onClick={handleSend} disabled={!sub || sending}
+          className="w-full gradient-gold text-black font-bold py-4 rounded-xl text-base hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+          {sending ? 'Sending…' : <>Send to {customer.name.split(' ')[0]}</>}
+        </button>
+        <button onClick={onBack} className="w-full text-xs text-neutral-600 hover:text-neutral-400 transition-colors py-2">
+          ← Back
+        </button>
+      </div>
+    );
+  }
+
+  // ── State B: Waiting / approved / completed ────────────
+  const status = pending.status;
+  if (status === 'customer_approved' || status === 'completed') {
+    return (
+      <div className="flex flex-col items-center text-center gap-5 py-10">
+        <div className="w-20 h-20 rounded-full bg-green-500/15 border-2 border-green-500/30 flex items-center justify-center">
+          <CheckCircle size={40} className="text-green-400" />
+        </div>
+        <div>
+          <p className="text-xl font-bold text-white">Payment Confirmed</p>
+          <p className="text-sm text-neutral-400 mt-1">
+            {customer.name} approved the charge
+          </p>
+        </div>
+
+        <div className="glass rounded-2xl p-5 w-full text-left space-y-2 max-w-sm">
+          <div className="flex justify-between text-sm"><span className="text-neutral-400">Subtotal</span><span className="text-white font-medium">${pending.subtotal.toFixed(2)}</span></div>
+          <div className="flex justify-between text-sm"><span className="text-neutral-400">Tax</span><span className="text-white font-medium">${pending.tax.toFixed(2)}</span></div>
+          {pending.tip > 0 && <div className="flex justify-between text-sm"><span className="text-neutral-400">Tip</span><span className="text-white font-medium">${pending.tip.toFixed(2)}</span></div>}
+          {pending.redeemAmt > 0 && <div className="flex justify-between text-sm"><span className="text-amber-400">Rewards Redeemed</span><span className="text-amber-400 font-medium">−${pending.redeemAmt.toFixed(2)}</span></div>}
+          <div className="flex justify-between text-base font-bold border-t border-white/8 pt-2.5"><span className="text-white">Total Charged</span><span className="text-white">${pending.total.toFixed(2)}</span></div>
+          <div className="border-t border-white/8 pt-3 flex items-center gap-2">
+            <Star size={13} className="text-amber-400" />
+            <span className="text-sm text-amber-400 font-semibold">+${pending.earned.toFixed(2)} rewards credited</span>
+          </div>
+        </div>
+
+        <button onClick={() => { reset(); onBack(); }}
+          className="w-full gradient-gold text-black font-bold py-4 rounded-xl text-sm hover:opacity-90 transition-opacity max-w-sm">
+          Next Customer
+        </button>
+      </div>
+    );
+  }
+
+  // awaiting_customer
+  return (
+    <div className="flex flex-col items-center text-center gap-5 py-10">
+      <div className="relative">
+        <div className="w-20 h-20 rounded-full bg-amber-500/10 border-2 border-amber-500/30 flex items-center justify-center">
+          <span className="text-4xl">📱</span>
+        </div>
+        <div className="absolute inset-0 rounded-full border-2 border-amber-400/40 animate-ping" />
+      </div>
+      <div>
+        <p className="text-xl font-bold text-white">Waiting for {customer.name.split(' ')[0]}…</p>
+        <p className="text-sm text-neutral-400 mt-1">
+          They'll add a tip, sign, and approve on their device.
+        </p>
+      </div>
+      <div className="glass rounded-xl px-4 py-3 text-xs text-neutral-400 max-w-sm">
+        Sent ${(pending.subtotal + pending.tax).toFixed(2)} · {pending.items.length} items
+      </div>
+      <button onClick={cancel}
+        className="text-xs text-neutral-500 hover:text-red-400 transition-colors flex items-center gap-1">
+        <X size={12} /> Cancel checkout
+      </button>
+    </div>
+  );
+}
+
 /* ── Main component ──────────────────────────────────────────────── */
 export default function StaffScanner() {
   const { user, logout } = useAuth();
@@ -526,7 +762,66 @@ export default function StaffScanner() {
     // Refresh to latest stats in case they've been updated elsewhere
     const fresh = getCustomer(c.id) ?? c;
     setCustomer(fresh);
-    setStep('checkout');
+    // Live + Supabase-backed customer: use real-time handoff
+    if (isLive() && fresh.supabaseBacked) {
+      setStep('handoff');
+    } else {
+      setStep('checkout');
+    }
+  }
+
+  async function handleFinalized(pending) {
+    const restaurantName = restaurants.find(r => r.id === restaurant)?.name ?? 'Unknown';
+
+    // 1. Save the final order with tip + signature
+    await addOrder({
+      userId: customer.id,
+      restaurantId: restaurant,
+      items: pending.items ?? [],
+      subtotal: pending.subtotal,
+      tax: pending.tax,
+      tip: pending.tip ?? 0,
+      total: pending.total,
+      rewards: pending.earned,
+      redeemed: pending.redeemAmt,
+      server: user?.name ?? 'Staff',
+      signature: pending.signature,
+    });
+
+    // 2. Update customer stats
+    recordOrder(customer.id, {
+      total: pending.total,
+      earned: pending.earned,
+      redeemed: pending.redeemAmt,
+    });
+
+    // 3. Notify customer
+    await addNotification({
+      userId: customer.id,
+      type: 'reward',
+      title: `You earned $${pending.earned.toFixed(2)}`,
+      body: `From your ${restaurantName} order`,
+    });
+
+    // 4. Audit log
+    await logAction({
+      actorId: user?.id ?? 'unknown',
+      actorName: user?.name ?? 'Unknown Staff',
+      actorRole: 'staff',
+      action: 'reward.apply',
+      targetId: customer.id,
+      targetName: customer.name,
+      amount: pending.earned,
+      details: {
+        orderTotal: pending.total,
+        subtotal: pending.subtotal,
+        rewardAmount: pending.earned,
+        redeemed: pending.redeemAmt,
+        restaurantId: restaurant,
+        manualEntry: false,
+        handoff: true,
+      },
+    });
   }
 
   function handleComplete(txData) {
@@ -604,7 +899,10 @@ export default function StaffScanner() {
           <div>
             <p className="text-xs text-amber-400 font-bold uppercase tracking-widest">Staff</p>
             <h1 className="text-lg font-bold text-white leading-tight">
-              {step === 'scan' ? 'Scan Customer' : step === 'checkout' ? 'Checkout' : 'Receipt'}
+              {step === 'scan' ? 'Scan Customer'
+                : step === 'checkout' ? 'Checkout'
+                : step === 'handoff'  ? 'Checkout'
+                : 'Receipt'}
             </h1>
           </div>
         </div>
@@ -644,6 +942,15 @@ export default function StaffScanner() {
           customer={customer}
           restaurantId={restaurant}
           onComplete={handleComplete}
+          onBack={reset}
+        />
+      )}
+      {step === 'handoff' && customer && (
+        <LiveHandoffStep
+          customer={customer}
+          restaurantId={restaurant}
+          staff={user}
+          onFinalized={handleFinalized}
           onBack={reset}
         />
       )}

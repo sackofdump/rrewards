@@ -52,7 +52,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-svh flex flex-col items-center justify-center px-4 py-12"
+    <div className="flex-1 w-full flex flex-col items-center justify-center px-4 py-12"
       style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(212,175,55,0.08) 0%, transparent 60%), #080a0f' }}>
 
       <div className="w-full max-w-sm">

@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import BottomNav from './components/BottomNav';
+import CustomerCheckoutModal from './components/CustomerCheckoutModal';
 import Login from './pages/Login';
 import SignIn from './pages/SignIn';
 import Register from './pages/Register';
@@ -54,6 +55,7 @@ function CustomerApp() {
           </Routes>
         </div>
         <BottomNav />
+        <CustomerCheckoutModal />
       </MobileShell>
     </ProtectedRoute>
   );
