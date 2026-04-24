@@ -118,7 +118,7 @@ function RestaurantModal({ restaurant, onSave, onClose }) {
 
 export default function DevAdmin() {
   const { user, logout } = useAuth();
-  const { all, addRestaurant, updateRestaurant, removeRestaurant, resetCustom } = useRestaurantStore();
+  const { all, addRestaurant, updateRestaurant, removeRestaurant, resetAll, overrides } = useRestaurantStore();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -130,7 +130,7 @@ export default function DevAdmin() {
 
   function handleDelete(r) {
     if (r.isBuiltIn) {
-      alert('Built-in demo restaurants can\'t be removed. Use the reset button to clear all custom additions.');
+      alert('Built-in demo restaurants can\'t be removed (only edited). Use the reset button below to undo all changes.');
       return;
     }
     if (confirm(`Remove "${r.name}"?`)) removeRestaurant(r.id);
@@ -214,25 +214,25 @@ export default function DevAdmin() {
               )}
             </div>
             <div className="flex gap-1 shrink-0">
+              <button onClick={() => setEditing(r)}
+                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white transition-colors">
+                <Edit2 size={13} />
+              </button>
               {!r.isBuiltIn && (
-                <button onClick={() => setEditing(r)}
-                  className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-neutral-400 hover:text-white transition-colors">
-                  <Edit2 size={13} />
+                <button onClick={() => handleDelete(r)}
+                  className="w-8 h-8 rounded-lg bg-white/5 hover:bg-red-500/15 flex items-center justify-center text-neutral-400 hover:text-red-400 transition-colors">
+                  <Trash2 size={13} />
                 </button>
               )}
-              <button onClick={() => handleDelete(r)}
-                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-red-500/15 flex items-center justify-center text-neutral-400 hover:text-red-400 transition-colors">
-                <Trash2 size={13} />
-              </button>
             </div>
           </div>
         ))}
       </div>
 
-      {all.some(r => !r.isBuiltIn) && (
-        <button onClick={() => { if (confirm('Remove all custom restaurants? Built-in demos stay.')) resetCustom(); }}
+      {(all.some(r => !r.isBuiltIn) || Object.keys(overrides).length > 0) && (
+        <button onClick={() => { if (confirm('Undo all dev edits and remove custom restaurants? Built-in demos will revert to their defaults.')) resetAll(); }}
           className="w-full mt-8 text-xs text-neutral-600 hover:text-red-400 transition-colors flex items-center justify-center gap-1.5 py-2">
-          <RotateCcw size={11} /> Remove all custom restaurants
+          <RotateCcw size={11} /> Reset all changes
         </button>
       )}
 

@@ -44,56 +44,127 @@ export const currentUser = {
   lifetimeEarned: 24.87,
 };
 
+// Full order records with datetime, items, quantities, subtotal, tax, total, rewards
 export const orders = [
-  {
-    id: 'ord-0081',
-    userId: 'u001',
-    restaurantId: 1,
-    date: '2026-04-21',
-    items: ['Ribeye Steak', 'Truffle Fries', 'House Salad'],
-    total: 87.50,
-    rewards: 2.63,
-    status: 'completed',
+  // ── Josh (u001) — 5 orders ────────────────────────────────────────
+  { id: 'ord-0081', userId: 'u001', restaurantId: 1, date: '2026-04-21T19:42', items: [
+      { name: 'Ribeye Steak',   qty: 1, price: 62.00 },
+      { name: 'Truffle Fries',  qty: 1, price: 12.00 },
+      { name: 'House Salad',    qty: 1, price: 10.00 },
+    ], subtotal: 84.00, tax: 3.50, total: 87.50, rewards: 2.63, server: 'Mike T.', status: 'completed',
   },
-  {
-    id: 'ord-0074',
-    userId: 'u001',
-    restaurantId: 2,
-    date: '2026-04-14',
-    items: ['Dragon Roll', 'Miso Soup', 'Edamame'],
-    total: 52.00,
-    rewards: 1.56,
-    status: 'completed',
+  { id: 'ord-0074', userId: 'u001', restaurantId: 2, date: '2026-04-14T20:15', items: [
+      { name: 'Dragon Roll',    qty: 2, price: 18.00 },
+      { name: 'Miso Soup',      qty: 1, price: 6.00 },
+      { name: 'Edamame',        qty: 1, price: 7.00 },
+    ], subtotal: 49.00, tax: 3.00, total: 52.00, rewards: 1.56, server: 'Sara K.', status: 'completed',
   },
-  {
-    id: 'ord-0063',
-    userId: 'u001',
-    restaurantId: 3,
-    date: '2026-04-02',
-    items: ['Fettuccine Alfredo', 'Bruschetta', 'Tiramisu'],
-    total: 61.00,
-    rewards: 1.83,
-    status: 'completed',
+  { id: 'ord-0063', userId: 'u001', restaurantId: 3, date: '2026-04-02T18:30', items: [
+      { name: 'Fettuccine Alfredo', qty: 1, price: 22.00 },
+      { name: 'Bruschetta',         qty: 2, price: 11.00 },
+      { name: 'Tiramisu',           qty: 1, price: 11.00 },
+    ], subtotal: 55.00, tax: 6.00, total: 61.00, rewards: 1.83, server: 'Ana R.', status: 'completed',
   },
-  {
-    id: 'ord-0055',
-    userId: 'u001',
-    restaurantId: 4,
-    date: '2026-03-28',
-    items: ['Lobster Bisque', 'Pan-Seared Salmon', 'Key Lime Pie'],
-    total: 94.00,
-    rewards: 2.82,
-    status: 'completed',
+  { id: 'ord-0055', userId: 'u001', restaurantId: 4, date: '2026-03-28T19:05', items: [
+      { name: 'Lobster Bisque',     qty: 1, price: 14.00 },
+      { name: 'Pan-Seared Salmon',  qty: 2, price: 32.00 },
+      { name: 'Key Lime Pie',       qty: 1, price: 9.00 },
+    ], subtotal: 87.00, tax: 7.00, total: 94.00, rewards: 2.82, server: 'Jordan L.', status: 'completed',
   },
-  {
-    id: 'ord-0047',
-    userId: 'u001',
-    restaurantId: 1,
-    date: '2026-03-15',
-    items: ['Filet Mignon', 'Caesar Salad', 'Crème Brûlée'],
-    total: 112.00,
-    rewards: 3.36,
-    status: 'completed',
+  { id: 'ord-0047', userId: 'u001', restaurantId: 1, date: '2026-03-15T20:40', items: [
+      { name: 'Filet Mignon',       qty: 1, price: 72.00 },
+      { name: 'Caesar Salad',       qty: 2, price: 14.00 },
+      { name: 'Crème Brûlée',       qty: 1, price: 11.00 },
+    ], subtotal: 104.00, tax: 8.00, total: 112.00, rewards: 3.36, server: 'Mike T.', status: 'completed',
+  },
+
+  // ── Morgan (u002) — 4 orders ──────────────────────────────────────
+  { id: 'ord-0082', userId: 'u002', restaurantId: 2, date: '2026-04-20T12:20', items: [
+      { name: 'Chicken Ramen',      qty: 2, price: 16.00 },
+      { name: 'Gyoza (6)',          qty: 1, price: 10.00 },
+    ], subtotal: 42.00, tax: 3.00, total: 45.00, rewards: 1.35, server: 'Sara K.', status: 'completed',
+  },
+  { id: 'ord-0070', userId: 'u002', restaurantId: 3, date: '2026-04-10T19:15', items: [
+      { name: 'Margherita Pizza',   qty: 1, price: 18.00 },
+      { name: 'Calamari Fritti',    qty: 1, price: 15.00 },
+    ], subtotal: 33.00, tax: 2.00, total: 35.00, rewards: 1.05, server: 'Ana R.', status: 'completed',
+  },
+  { id: 'ord-0058', userId: 'u002', restaurantId: 4, date: '2026-03-25T20:00', items: [
+      { name: 'Clam Chowder',       qty: 2, price: 11.00 },
+      { name: 'Grilled Swordfish',  qty: 1, price: 38.00 },
+    ], subtotal: 60.00, tax: 5.00, total: 65.00, rewards: 1.95, server: 'Jordan L.', status: 'completed',
+  },
+  { id: 'ord-0041', userId: 'u002', restaurantId: 1, date: '2026-03-08T18:45', items: [
+      { name: 'NY Strip',           qty: 1, price: 48.00 },
+      { name: 'Mac & Cheese',       qty: 1, price: 13.00 },
+      { name: 'Old Fashioned',      qty: 2, price: 16.00 },
+    ], subtotal: 93.00, tax: 7.00, total: 100.00, rewards: 3.00, server: 'Mike T.', status: 'completed',
+  },
+
+  // ── Jordan (u003) — 6 orders (Platinum spender) ──────────────────
+  { id: 'ord-0083', userId: 'u003', restaurantId: 1, date: '2026-04-22T20:30', items: [
+      { name: 'Bone-In Ribeye',     qty: 2, price: 72.00 },
+      { name: 'Oysters Rockefeller', qty: 1, price: 22.00 },
+      { name: 'Creamed Spinach',    qty: 1, price: 11.00 },
+      { name: 'Chocolate Lava Cake', qty: 2, price: 13.00 },
+    ], subtotal: 203.00, tax: 16.00, total: 219.00, rewards: 6.57, server: 'Mike T.', status: 'completed',
+  },
+  { id: 'ord-0076', userId: 'u003', restaurantId: 4, date: '2026-04-15T19:50', items: [
+      { name: 'Maine Lobster Roll', qty: 2, price: 32.00 },
+      { name: 'Tuna Tartare',       qty: 1, price: 19.00 },
+      { name: 'Whiskey Sour',       qty: 3, price: 15.00 },
+    ], subtotal: 128.00, tax: 10.00, total: 138.00, rewards: 4.14, server: 'Jordan L.', status: 'completed',
+  },
+  { id: 'ord-0068', userId: 'u003', restaurantId: 3, date: '2026-04-05T21:00', items: [
+      { name: 'Osso Buco',          qty: 1, price: 38.00 },
+      { name: 'Burrata',            qty: 1, price: 16.00 },
+      { name: 'Cannoli (2)',        qty: 2, price: 11.00 },
+      { name: 'Aperol Spritz',      qty: 2, price: 14.00 },
+    ], subtotal: 104.00, tax: 8.00, total: 112.00, rewards: 3.36, server: 'Ana R.', status: 'completed',
+  },
+  { id: 'ord-0061', userId: 'u003', restaurantId: 2, date: '2026-03-30T18:40', items: [
+      { name: 'Omakase (9 pc)',     qty: 2, price: 62.00 },
+      { name: 'Sake Flight',        qty: 1, price: 24.00 },
+    ], subtotal: 148.00, tax: 11.00, total: 159.00, rewards: 4.77, server: 'Sara K.', status: 'completed',
+  },
+  { id: 'ord-0052', userId: 'u003', restaurantId: 1, date: '2026-03-22T19:20', items: [
+      { name: 'Surf & Turf',        qty: 1, price: 89.00 },
+      { name: 'Caesar Salad',       qty: 1, price: 14.00 },
+    ], subtotal: 103.00, tax: 8.00, total: 111.00, rewards: 3.33, server: 'Mike T.', status: 'completed',
+  },
+  { id: 'ord-0039', userId: 'u003', restaurantId: 4, date: '2026-03-05T20:10', items: [
+      { name: 'Cioppino',           qty: 1, price: 42.00 },
+      { name: 'Oysters on the Half', qty: 1, price: 24.00 },
+    ], subtotal: 66.00, tax: 5.00, total: 71.00, rewards: 2.13, server: 'Jordan L.', status: 'completed',
+  },
+
+  // ── Taylor (u004) — 2 orders ──────────────────────────────────────
+  { id: 'ord-0067', userId: 'u004', restaurantId: 3, date: '2026-04-10T19:00', items: [
+      { name: 'Cacio e Pepe',       qty: 1, price: 21.00 },
+      { name: 'Burrata',            qty: 1, price: 16.00 },
+    ], subtotal: 37.00, tax: 3.00, total: 40.00, rewards: 1.20, server: 'Ana R.', status: 'completed',
+  },
+  { id: 'ord-0042', userId: 'u004', restaurantId: 2, date: '2026-03-18T20:30', items: [
+      { name: 'Tonkotsu Ramen',     qty: 2, price: 18.00 },
+      { name: 'Mochi Ice Cream',    qty: 1, price: 8.00 },
+    ], subtotal: 44.00, tax: 3.00, total: 47.00, rewards: 1.41, server: 'Sara K.', status: 'completed',
+  },
+
+  // ── Casey (u005) — 3 recent orders (inactive account) ───────────
+  { id: 'ord-0033', userId: 'u005', restaurantId: 1, date: '2026-02-14T19:30', items: [
+      { name: 'NY Strip',           qty: 2, price: 48.00 },
+      { name: 'Mac & Cheese',       qty: 1, price: 13.00 },
+    ], subtotal: 109.00, tax: 8.00, total: 117.00, rewards: 3.51, server: 'Mike T.', status: 'completed',
+  },
+  { id: 'ord-0027', userId: 'u005', restaurantId: 3, date: '2026-01-28T20:00', items: [
+      { name: 'Lasagna della Nonna', qty: 1, price: 24.00 },
+      { name: 'Calamari Fritti',    qty: 1, price: 15.00 },
+    ], subtotal: 39.00, tax: 3.00, total: 42.00, rewards: 1.26, server: 'Ana R.', status: 'completed',
+  },
+  { id: 'ord-0018', userId: 'u005', restaurantId: 2, date: '2026-01-10T19:45', items: [
+      { name: 'Spicy Tuna Roll',    qty: 3, price: 14.00 },
+      { name: 'Seaweed Salad',      qty: 1, price: 8.00 },
+    ], subtotal: 50.00, tax: 4.00, total: 54.00, rewards: 1.62, server: 'Sara K.', status: 'completed',
   },
 ];
 

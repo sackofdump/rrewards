@@ -38,7 +38,8 @@ function OrderCard({ order }) {
             {order.items.map((item, i) => (
               <li key={i} className="text-sm text-neutral-300 flex items-center gap-2">
                 <span className="w-1 h-1 rounded-full bg-amber-500 shrink-0" />
-                {item}
+                <span className="flex-1">{item.qty}× {item.name}</span>
+                <span className="text-neutral-500 text-xs">${(item.price * item.qty).toFixed(2)}</span>
               </li>
             ))}
           </ul>
