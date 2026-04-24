@@ -128,6 +128,9 @@ function CheckoutStep({ customer, restaurantId, onComplete, onBack }) {
   const [mode, setMode]             = useState('menu'); // 'menu' | 'manual'
   const [activeCategory, setActiveCategory] = useState('All');
   const [redeemOn, setRedeemOn]     = useState(false);
+  const [tipMode, setTipMode]       = useState('pct'); // 'pct' | 'custom' | 'none'
+  const [tipPct, setTipPct]         = useState(0.18);
+  const [tipCustom, setTipCustom]   = useState('');
 
   const tier = tierConfig[customer.tier];
   const restaurant = restaurants.find(r => r.id === restaurantId);
@@ -141,9 +144,14 @@ function CheckoutStep({ customer, restaurantId, onComplete, onBack }) {
   const cartSubtotal = cart.reduce((s, it) => s + it.price * it.qty, 0);
   const sub = mode === 'menu' ? cartSubtotal : (parseFloat(manualAmount) || 0);
   const tax = sub * taxRate;
-  const earned = sub * rewardRate;
-  const redeemAmt = redeemOn ? Math.min(customer.rewardsBalance, sub + tax) : 0;
-  const total = Math.max(0, sub + tax - redeemAmt);
+  const earned = sub * rewardRate; // rewards earned on pre-tax subtotal only (not tip)
+  const tip = (() => {
+    if (tipMode === 'none') return 0;
+    if (tipMode === 'custom') return parseFloat(tipCustom) || 0;
+    return sub * tipPct;
+  })();
+  const redeemAmt = redeemOn ? Math.min(customer.rewardsBalance, sub + tax + tip) : 0;
+  const total = Math.max(0, sub + tax + tip - redeemAmt);
 
   function addToCart(item) {
     setCart(prev => {
@@ -166,7 +174,7 @@ function CheckoutStep({ customer, restaurantId, onComplete, onBack }) {
     if (!sub) return;
     onComplete({
       subtotal: sub,
-      tax, earned, redeemAmt, total,
+      tax, tip, earned, redeemAmt, total,
       items: mode === 'menu' ? cart : null,
     });
   }
@@ -310,13 +318,73 @@ function CheckoutStep({ customer, restaurantId, onComplete, onBack }) {
             <span className="text-white font-medium">${tax.toFixed(2)}</span>
           </div>
 
+          {/* Tip */}
+          <div className="pt-2 border-t border-white/5 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-widest text-neutral-500">Add Tip</span>
+              {tip > 0 && (
+                <span className="text-sm text-white font-medium">${tip.toFixed(2)}</span>
+              )}
+            </div>
+            <div className="grid grid-cols-5 gap-1.5">
+              {[
+                { label: '10%', value: 0.10 },
+                { label: '15%', value: 0.15 },
+                { label: '18%', value: 0.18 },
+                { label: '20%', value: 0.20 },
+              ].map(({ label, value }) => {
+                const active = tipMode === 'pct' && Math.abs(tipPct - value) < 0.001;
+                return (
+                  <button key={value} type="button"
+                    onClick={() => { setTipMode('pct'); setTipPct(value); }}
+                    className={`py-2 rounded-lg text-xs font-bold transition-all ${
+                      active
+                        ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                        : 'bg-neutral-900 text-neutral-400 border border-white/5 hover:border-white/15'
+                    }`}>
+                    {label}
+                    <span className="block text-[10px] font-normal opacity-70">
+                      ${(sub * value).toFixed(2)}
+                    </span>
+                  </button>
+                );
+              })}
+              <button type="button"
+                onClick={() => setTipMode(tipMode === 'custom' ? 'none' : 'custom')}
+                className={`py-2 rounded-lg text-xs font-bold transition-all ${
+                  tipMode === 'custom'
+                    ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                    : 'bg-neutral-900 text-neutral-400 border border-white/5 hover:border-white/15'
+                }`}>
+                Custom
+              </button>
+            </div>
+            {tipMode === 'custom' && (
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 text-sm">$</span>
+                <input type="number" min="0" step="0.01"
+                  value={tipCustom}
+                  onChange={e => setTipCustom(e.target.value)}
+                  placeholder="0.00" autoFocus
+                  className="w-full bg-neutral-900 border border-white/8 rounded-lg pl-7 pr-3 py-2 text-sm text-white outline-none focus:border-amber-500/50" />
+              </div>
+            )}
+            {tipMode !== 'none' && (
+              <button type="button"
+                onClick={() => { setTipMode('none'); setTipCustom(''); }}
+                className="text-[11px] text-neutral-600 hover:text-neutral-400 transition-colors">
+                No tip
+              </button>
+            )}
+          </div>
+
           {/* Redeem toggle */}
           {customer.rewardsBalance > 0 && (
-            <div className="flex items-center justify-between pt-1 border-t border-white/5">
+            <div className="flex items-center justify-between pt-2 border-t border-white/5">
               <div className="flex items-center gap-2">
                 <Gift size={13} className="text-amber-400" />
                 <span className="text-sm text-amber-300">
-                  Redeem ${Math.min(customer.rewardsBalance, sub + tax).toFixed(2)} rewards
+                  Redeem ${Math.min(customer.rewardsBalance, sub + tax + tip).toFixed(2)} rewards
                 </span>
               </div>
               <button onClick={() => setRedeemOn(r => !r)}
@@ -377,6 +445,7 @@ function ReceiptStep({ customer, tx, onNext }) {
         {[
           { label: 'Subtotal',       value: `$${tx.subtotal.toFixed(2)}` },
           { label: 'Tax',            value: `$${tx.tax.toFixed(2)}` },
+          (tx.tip ?? 0) > 0 && { label: 'Tip', value: `$${tx.tip.toFixed(2)}` },
           tx.redeemAmt > 0 && { label: 'Rewards Redeemed', value: `−$${tx.redeemAmt.toFixed(2)}`, accent: 'amber' },
           { label: 'Total Charged',  value: `$${tx.total.toFixed(2)}`, bold: true },
         ].filter(Boolean).map(({ label, value, accent, bold }) => (
@@ -431,6 +500,7 @@ export default function StaffScanner() {
       items: txData.items ?? [],
       subtotal: txData.subtotal,
       tax: txData.tax,
+      tip: txData.tip ?? 0,
       total: txData.total,
       rewards: txData.earned,
       server: user?.name ?? 'Staff',

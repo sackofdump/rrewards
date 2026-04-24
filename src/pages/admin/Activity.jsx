@@ -139,20 +139,17 @@ export default function Activity() {
         </div>
       </div>
 
-      {flaggedCount > 0 && (
+      {unreadFlaggedCount > 0 && (
         <div className="rounded-xl bg-red-500/8 border border-red-500/25 px-4 py-3 mb-4 flex items-start gap-2.5">
           <ShieldAlert size={15} className="text-red-400 shrink-0 mt-0.5" />
           <div className="flex-1 text-xs text-neutral-200 leading-relaxed">
-            <span className="text-red-400 font-bold">{flaggedCount} staff anomal{flaggedCount === 1 ? 'y' : 'ies'}</span>
-            {unreadFlaggedCount > 0 && <> · <span className="text-white font-semibold">{unreadFlaggedCount} new</span></>} detected.
+            <span className="text-red-400 font-bold">{unreadFlaggedCount} staff anomal{unreadFlaggedCount === 1 ? 'y' : 'ies'}</span> detected.
             Review below — anomalies cannot be deleted but can be marked as reviewed.
           </div>
-          {unreadFlaggedCount > 0 && (
-            <button onClick={markAllRead}
-              className="shrink-0 px-2.5 py-1 rounded-lg bg-white/8 hover:bg-white/15 text-[11px] font-semibold text-white flex items-center gap-1">
-              <CheckCheck size={11} /> Mark all read
-            </button>
-          )}
+          <button onClick={markAllRead}
+            className="shrink-0 px-2.5 py-1 rounded-lg bg-white/8 hover:bg-white/15 text-[11px] font-semibold text-white flex items-center gap-1">
+            <CheckCheck size={11} /> Mark all read
+          </button>
         </div>
       )}
 

@@ -128,7 +128,7 @@ export default function DevAdmin() {
   const [showAdd, setShowAdd] = useState(false);
   const [showImpersonate, setShowImpersonate] = useState(false);
 
-  const adminAlerts = entries.filter(e => e.actorRole === 'admin' && e.anomaly).length;
+  const adminAlerts = entries.filter(e => e.actorRole === 'admin' && e.anomaly && !e.readByDev).length;
 
   function handleNukeData() {
     if (!confirm('NUKE ALL DATA? This wipes every localStorage entry — customers, menu, promos, settings, activity, notifications. Are you sure?')) return;

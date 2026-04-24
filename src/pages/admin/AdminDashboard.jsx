@@ -76,7 +76,7 @@ export default function AdminDashboard() {
   const { rewardRate } = useSettings();
   const { entries } = useActivityLog();
   const { get } = useCustomerStats();
-  const staffAnomalies = entries.filter(e => e.actorRole === 'staff' && e.anomaly).length;
+  const staffAnomalies = entries.filter(e => e.actorRole === 'staff' && e.anomaly && !e.read).length;
 
   // Fetch Supabase profiles in live mode
   const [supabaseCustomers, setSupabaseCustomers] = useState([]);

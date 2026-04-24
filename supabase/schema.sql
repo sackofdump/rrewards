@@ -66,8 +66,13 @@ create table if not exists public.activity_log (
   details      jsonb default '{}',
   anomaly      jsonb,
   read         boolean default false,
+  read_by_dev  boolean default false,
   created_at   timestamptz default now()
 );
+
+-- Safe to run on existing tables: adds the column if you created the
+-- log before this change.
+alter table public.activity_log add column if not exists read_by_dev boolean default false;
 create index if not exists activity_anomaly_idx on public.activity_log((anomaly is not null));
 
 -- ── Staff accounts ────────────────────────────────────────────────

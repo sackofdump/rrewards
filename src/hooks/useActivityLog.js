@@ -36,6 +36,7 @@ function rowToEntry(r) {
     details: r.details ?? {},
     anomaly: r.anomaly,
     read: Boolean(r.read),
+    readByDev: Boolean(r.read_by_dev),
     createdAt: r.created_at,
   };
 }
@@ -270,30 +271,29 @@ export function useAllActivityLogs() {
   }, []);
 
   async function markRead(id) {
-    // Try Supabase first (numeric ID)
+    // Dev marks read_by_dev — leave the manager's 'read' untouched.
     if (typeof id === 'number' || !isNaN(Number(id))) {
       try {
-        await supabase.from('activity_log').update({ read: true }).eq('id', id);
+        await supabase.from('activity_log').update({ read_by_dev: true }).eq('id', id);
       } catch { /* ignore */ }
     }
-    // Also update both localStorage keys
     ['', '_live'].forEach(suffix => {
       const key = `${BASE_KEY}${suffix}`;
       try {
         const stored = localStorage.getItem(key);
         if (!stored) return;
         const list = JSON.parse(stored);
-        const next = list.map(e => e.id === id ? { ...e, read: true } : e);
+        const next = list.map(e => e.id === id ? { ...e, readByDev: true } : e);
         localStorage.setItem(key, JSON.stringify(next));
       } catch { /* ignore */ }
     });
     notifyLocal();
-    setEntries(prev => prev.map(e => e.id === id ? { ...e, read: true } : e));
+    setEntries(prev => prev.map(e => e.id === id ? { ...e, readByDev: true } : e));
   }
 
   async function markAllRead() {
     try {
-      await supabase.from('activity_log').update({ read: true }).eq('read', false);
+      await supabase.from('activity_log').update({ read_by_dev: true }).eq('read_by_dev', false);
     } catch { /* ignore */ }
     ['', '_live'].forEach(suffix => {
       const key = `${BASE_KEY}${suffix}`;
@@ -301,12 +301,12 @@ export function useAllActivityLogs() {
         const stored = localStorage.getItem(key);
         if (!stored) return;
         const list = JSON.parse(stored);
-        const next = list.map(e => e.anomaly ? { ...e, read: true } : e);
+        const next = list.map(e => e.anomaly ? { ...e, readByDev: true } : e);
         localStorage.setItem(key, JSON.stringify(next));
       } catch { /* ignore */ }
     });
     notifyLocal();
-    setEntries(prev => prev.map(e => e.anomaly ? { ...e, read: true } : e));
+    setEntries(prev => prev.map(e => e.anomaly ? { ...e, readByDev: true } : e));
   }
 
   return { entries, markRead, markAllRead };

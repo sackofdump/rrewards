@@ -37,7 +37,7 @@ function formatWhen(iso) {
 function AlertCard({ entry, onMarkRead }) {
   const critical = entry.anomaly?.level === 'critical';
   const label = ACTION_LABELS[entry.action] ?? entry.action;
-  const isRead = Boolean(entry.read);
+  const isRead = Boolean(entry.readByDev);
   return (
     <div className={`rounded-xl p-4 border transition-opacity ${isRead ? 'opacity-50' : ''} ${
       critical ? 'bg-red-500/8 border-red-500/30' : 'bg-amber-500/8 border-amber-500/25'
@@ -127,11 +127,11 @@ export default function DevAlerts() {
     entries.filter(e => e.actorRole === 'staff' && e.anomaly),
     [entries]
   );
-  const adminAlerts = showReviewed ? adminAlertsAll : adminAlertsAll.filter(a => !a.read);
-  const staffAlerts = showReviewed ? staffAlertsAll : staffAlertsAll.filter(a => !a.read);
+  const adminAlerts = showReviewed ? adminAlertsAll : adminAlertsAll.filter(a => !a.readByDev);
+  const staffAlerts = showReviewed ? staffAlertsAll : staffAlertsAll.filter(a => !a.readByDev);
 
-  const unreadAdmin = adminAlertsAll.filter(a => !a.read).length;
-  const unreadStaff = staffAlertsAll.filter(a => !a.read).length;
+  const unreadAdmin = adminAlertsAll.filter(a => !a.readByDev).length;
+  const unreadStaff = staffAlertsAll.filter(a => !a.readByDev).length;
   const unreadTotal = unreadAdmin + unreadStaff;
 
   const recentAdminActions = useMemo(() =>
@@ -178,14 +178,14 @@ export default function DevAlerts() {
       <div className="grid grid-cols-3 gap-3 mb-5">
         <div className="glass rounded-xl p-3 text-center">
           <p className="text-xl font-bold text-red-400">
-            {adminAlertsAll.filter(a => a.anomaly.level === 'critical' && !a.read).length}
+            {adminAlertsAll.filter(a => a.anomaly.level === 'critical' && !a.readByDev).length}
           </p>
           <p className="text-xs text-neutral-500 mt-0.5">Critical · New</p>
         </div>
         <div className="glass rounded-xl p-3 text-center">
           <p className="text-xl font-bold text-amber-400">
-            {(adminAlertsAll.filter(a => a.anomaly.level === 'warning' && !a.read).length +
-              staffAlertsAll.filter(a => a.anomaly.level === 'warning' && !a.read).length)}
+            {(adminAlertsAll.filter(a => a.anomaly.level === 'warning' && !a.readByDev).length +
+              staffAlertsAll.filter(a => a.anomaly.level === 'warning' && !a.readByDev).length)}
           </p>
           <p className="text-xs text-neutral-500 mt-0.5">Warnings · New</p>
         </div>
