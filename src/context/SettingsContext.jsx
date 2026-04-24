@@ -3,8 +3,10 @@ import { createContext, useContext, useState, useEffect } from 'react';
 const SettingsContext = createContext(null);
 
 const DEFAULTS = {
-  rewardRate: 0.03,
-  taxRate:    0.08,
+  rewardRate:     0.03,
+  taxRate:        0.08,
+  referralBonus:  10,
+  birthdayBonus:  10,
 };
 
 const STORAGE_KEY = 'rr_settings';

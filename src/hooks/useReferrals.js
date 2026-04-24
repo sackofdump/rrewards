@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSettings } from '../context/SettingsContext';
 
 const STORAGE_KEY = 'rr_referrals';
 
@@ -9,8 +10,6 @@ const DEFAULT_REFERRALS = {
     { name: 'Riley G.',  joinedAt: '2026-02-14', firstVisitAt: '2026-02-18', earned: 10, status: 'completed' },
   ],
 };
-
-const REFERRAL_BONUS = 10;
 
 function load() {
   try {
@@ -24,6 +23,7 @@ function save(data) {
 }
 
 export function useReferrals(userId) {
+  const { referralBonus } = useSettings();
   const [all, setAll] = useState(load);
 
   useEffect(() => { save(all); }, [all]);
@@ -48,5 +48,5 @@ export function useReferrals(userId) {
     });
   }
 
-  return { referrals: myReferrals, completedCount, totalEarned, referralBonus: REFERRAL_BONUS, addReferral };
+  return { referrals: myReferrals, completedCount, totalEarned, referralBonus, addReferral };
 }

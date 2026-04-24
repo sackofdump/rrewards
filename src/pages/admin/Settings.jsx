@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useSettings } from '../../context/SettingsContext';
 import {
   ArrowLeft, Shield, Percent, Receipt, Check,
-  RotateCcw, TrendingUp
+  RotateCcw, TrendingUp, Users, Cake, DollarSign
 } from 'lucide-react';
 
 function RatePreset({ label, value, current, onSelect }) {
@@ -21,17 +21,23 @@ function RatePreset({ label, value, current, onSelect }) {
 }
 
 export default function Settings() {
-  const { rewardRate, taxRate, update, reset } = useSettings();
+  const { rewardRate, taxRate, referralBonus, birthdayBonus, update, reset } = useSettings();
   const [rewardInput, setRewardInput] = useState((rewardRate * 100).toString());
   const [taxInput, setTaxInput]       = useState((taxRate * 100).toString());
+  const [referralInput, setReferralInput] = useState(String(referralBonus));
+  const [birthdayInput, setBirthdayInput] = useState(String(birthdayBonus));
   const [saved, setSaved] = useState(false);
 
   function handleSave() {
     const r = parseFloat(rewardInput);
     const t = parseFloat(taxInput);
+    const ref = parseFloat(referralInput);
+    const bd  = parseFloat(birthdayInput);
     const patch = {};
-    if (!isNaN(r) && r >= 0 && r <= 100) patch.rewardRate = r / 100;
-    if (!isNaN(t) && t >= 0 && t <= 100) patch.taxRate    = t / 100;
+    if (!isNaN(r)   && r   >= 0 && r   <= 100)  patch.rewardRate    = r / 100;
+    if (!isNaN(t)   && t   >= 0 && t   <= 100)  patch.taxRate       = t / 100;
+    if (!isNaN(ref) && ref >= 0)                patch.referralBonus = ref;
+    if (!isNaN(bd)  && bd  >= 0)                patch.birthdayBonus = bd;
     update(patch);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -42,6 +48,8 @@ export default function Settings() {
     reset();
     setRewardInput('3');
     setTaxInput('8');
+    setReferralInput('10');
+    setBirthdayInput('10');
   }
 
   function setRewardPreset(r) {
@@ -120,6 +128,46 @@ export default function Settings() {
             className="w-full bg-neutral-900 border border-white/8 rounded-xl px-4 py-3 pr-10 text-sm text-white outline-none focus:border-amber-500/50 transition-colors"
           />
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 font-semibold">%</span>
+        </div>
+      </div>
+
+      {/* Referral Bonus */}
+      <div className="glass rounded-2xl p-5 mb-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Users size={15} className="text-amber-400" />
+          <h2 className="text-sm font-bold text-white uppercase tracking-wider">Referral Bonus</h2>
+        </div>
+        <p className="text-xs text-neutral-400 leading-relaxed mb-4">
+          Amount credited to <span className="text-white font-semibold">both</span> the referrer and the new customer when the referral completes their first visit.
+        </p>
+        <div className="relative">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500">$</span>
+          <input
+            type="number" min="0" step="1"
+            value={referralInput}
+            onChange={e => setReferralInput(e.target.value)}
+            className="w-full bg-neutral-900 border border-white/8 rounded-xl pl-8 pr-4 py-3 text-sm text-white outline-none focus:border-amber-500/50 transition-colors"
+          />
+        </div>
+      </div>
+
+      {/* Birthday Bonus */}
+      <div className="glass rounded-2xl p-5 mb-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Cake size={15} className="text-pink-400" />
+          <h2 className="text-sm font-bold text-white uppercase tracking-wider">Birthday Bonus</h2>
+        </div>
+        <p className="text-xs text-neutral-400 leading-relaxed mb-4">
+          Automatically credited to a customer's rewards balance on their birthday each year.
+        </p>
+        <div className="relative">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500">$</span>
+          <input
+            type="number" min="0" step="1"
+            value={birthdayInput}
+            onChange={e => setBirthdayInput(e.target.value)}
+            className="w-full bg-neutral-900 border border-white/8 rounded-xl pl-8 pr-4 py-3 text-sm text-white outline-none focus:border-amber-500/50 transition-colors"
+          />
         </div>
       </div>
 

@@ -18,6 +18,7 @@ import CustomerDetail from './pages/admin/CustomerDetail';
 import MenuManagement from './pages/admin/MenuManagement';
 import Settings from './pages/admin/Settings';
 import PromotionsAdmin from './pages/admin/PromotionsAdmin';
+import ChallengesAdmin from './pages/admin/ChallengesAdmin';
 const Analytics = lazy(() => import('./pages/admin/Analytics'));
 import DevLogin from './pages/dev/DevLogin';
 import DevAdmin from './pages/dev/DevAdmin';
@@ -63,6 +64,7 @@ function AdminApp() {
             <Route path="/admin/menu"          element={<MenuManagement />} />
             <Route path="/admin/settings"      element={<Settings />} />
             <Route path="/admin/promotions"    element={<PromotionsAdmin />} />
+            <Route path="/admin/challenges"    element={<ChallengesAdmin />} />
             <Route path="/admin/analytics" element={
               <Suspense fallback={<div className="p-8 text-center text-neutral-500 text-sm">Loading charts…</div>}>
                 <Analytics />

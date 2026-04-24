@@ -92,9 +92,24 @@ export function useChallenges(userId) {
       c.id === id ? { ...c, claimedAt: new Date().toISOString() } : c
     ));
   }
+  function addChallenge(data) {
+    const id = `ch-${Date.now()}`;
+    setChallenges(prev => [...prev, {
+      id,
+      resetCycle: 'monthly',
+      claimedAt: null,
+      ...data,
+    }]);
+  }
+  function updateChallenge(id, patch) {
+    setChallenges(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
+  }
+  function removeChallenge(id) {
+    setChallenges(prev => prev.filter(c => c.id !== id));
+  }
   function resetChallenges() {
     setChallenges(makeDefaults());
   }
 
-  return { challenges: enriched, claim, resetChallenges };
+  return { challenges: enriched, claim, addChallenge, updateChallenge, removeChallenge, resetChallenges };
 }

@@ -4,7 +4,7 @@ import { adminCustomers, restaurants, tierConfig } from '../../data/mockData';
 import { useMenuStore } from '../../hooks/useMenuStore';
 import { useSettings } from '../../context/SettingsContext';
 import { exportCustomersCSV, exportOrdersCSV } from '../../utils/generateCSV';
-import { Search, Users, TrendingUp, DollarSign, ChevronRight, Shield, UtensilsCrossed, Download, Flame, Settings as SettingsIcon, BarChart3, FileSpreadsheet } from 'lucide-react';
+import { Search, Users, TrendingUp, DollarSign, ChevronRight, Shield, UtensilsCrossed, Download, Flame, Settings as SettingsIcon, BarChart3, FileSpreadsheet, Target } from 'lucide-react';
 
 function StatCard({ icon: Icon, label, value, sub }) {
   return (
@@ -115,6 +115,18 @@ export default function AdminDashboard() {
           <div className="flex-1 text-left min-w-0">
             <p className="text-sm font-bold text-white">Promotions</p>
             <p className="text-xs text-neutral-500 mt-0.5">Create & manage promos</p>
+          </div>
+          <ChevronRight size={16} className="text-neutral-500 shrink-0" />
+        </Link>
+
+        <Link to="/admin/challenges"
+          className="glass rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition-all">
+          <div className="w-11 h-11 rounded-xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center shrink-0">
+            <Target size={18} className="text-blue-400" />
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-sm font-bold text-white">Challenges</p>
+            <p className="text-xs text-neutral-500 mt-0.5">Monthly customer goals</p>
           </div>
           <ChevronRight size={16} className="text-neutral-500 shrink-0" />
         </Link>
