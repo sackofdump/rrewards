@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { adminCustomers, restaurants, tierConfig, MENU_CATEGORIES } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
@@ -8,6 +8,7 @@ import { useOrderStore } from '../../hooks/useOrderStore';
 import { useCustomerStats, getCustomerStats } from '../../hooks/useCustomerStats';
 import { useNotifications } from '../../hooks/useNotifications';
 import { isLive } from '../../utils/sessionMode';
+import { supabase } from '../../lib/supabase';
 import {
   ScanLine, XCircle, LogOut, ChevronRight,
   CheckCircle, ArrowLeft, Star, Gift, Receipt,
@@ -25,27 +26,49 @@ function parseQr(raw) {
 /* ── STEP 1: Scan / select customer ─────────────────────────────── */
 function ScanStep({ onCustomerFound, notFound, setNotFound }) {
   const [scanning, setScanning] = useState(false);
+  const [liveCustomers, setLiveCustomers] = useState([]);
   const live = isLive();
 
-  // Build the shortcut list:
-  //  - live: only registered users (no demo customers)
-  //  - demo: demo customers
-  const shortcutList = (() => {
-    if (live) {
-      try {
-        const raw = localStorage.getItem('rr_registered_users');
-        const registered = raw ? JSON.parse(raw) : [];
-        return registered.filter(c => c.status === 'active');
-      } catch { return []; }
-    }
-    return adminCustomers.filter(c => c.status === 'active').slice(0, 4);
-  })();
+  // Fetch Supabase profiles in live mode so the scanner can look them up
+  useEffect(() => {
+    if (!live) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+      if (cancelled || !data) return;
+      setLiveCustomers(data.map(p => ({
+        id: p.id,
+        name: p.name,
+        email: p.email,
+        tier: p.tier ?? 'Bronze',
+        rewardsBalance: Number(p.rewards_balance ?? 0),
+        lifetimeSpend:  Number(p.lifetime_spend ?? 0),
+        lifetimeEarned: Number(p.lifetime_earned ?? 0),
+        orders: Number(p.orders_count ?? 0),
+        lastVisit: p.last_visit,
+        status: p.status ?? 'active',
+        memberSince: p.member_since,
+        supabaseBacked: true,
+      })));
+    })();
+    return () => { cancelled = true; };
+  }, [live]);
+
+  const shortcutList = live
+    ? liveCustomers
+    : adminCustomers.filter(c => c.status === 'active').slice(0, 4);
 
   function handleScan(raw) {
     setScanning(false);
     const uid = parseQr(raw);
-    // Look up via the stats helper — covers both registered and demo customers
-    const found = getCustomerStats(uid);
+    // Live mode: look up in fetched Supabase list; demo: local stats helper
+    const found = live
+      ? liveCustomers.find(c => c.id === uid)
+      : getCustomerStats(uid);
     if (found) { setNotFound(false); onCustomerFound(found); }
     else        { setNotFound(true); }
   }
