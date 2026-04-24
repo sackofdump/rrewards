@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useUserStore } from '../hooks/useUserStore';
-import { useNotifications } from '../hooks/useNotifications';
+import { supabase } from '../lib/supabase';
 import {
   Eye, EyeOff, Mail, Lock, User as UserIcon, Phone,
   AlertCircle, AlertTriangle, Cake, Check, ArrowLeft
 } from 'lucide-react';
 
+function genReferralCode(name) {
+  const first = (name.split(' ')[0] || 'user').toUpperCase().slice(0, 6);
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `${first}-${rand}`;
+}
+
 export default function Register() {
   const { signInAs } = useAuth();
-  const { register } = useUserStore();
-  const { addNotification } = useNotifications();
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1); // 1: details, 2: birthday warning+set, 3: confirm
@@ -55,17 +58,72 @@ export default function Register() {
     if (!tosAgreed) return setError('You must accept the terms to continue.');
     setSubmitting(true);
     try {
-      const newUser = register({ name, email, password, phone, birthday });
-      signInAs({ ...newUser, role: 'customer' }, { liveMode: true });
-      addNotification({
-        userId: newUser.id,
+      // Create auth user
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+      });
+      if (signUpError) throw signUpError;
+      const authUser = signUpData.user;
+      if (!authUser) throw new Error('Signup failed — no user returned');
+
+      // Create profile row
+      const profileRow = {
+        id: authUser.id,
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone?.trim() || null,
+        birthday: birthday || null,
+        birthday_set: Boolean(birthday),
+        referral_code: genReferralCode(name),
+        tier: 'Bronze',
+        rewards_balance: 0,
+        lifetime_spend: 0,
+        lifetime_earned: 0,
+        orders_count: 0,
+        status: 'active',
+        member_since: new Date().toISOString().split('T')[0],
+      };
+      const { error: profileError } = await supabase.from('profiles').insert(profileRow);
+      if (profileError) throw profileError;
+
+      // Welcome notification
+      await supabase.from('notifications').insert({
+        user_id: authUser.id,
         type: 'welcome',
         title: 'Welcome to Restaurant Rewards!',
         body: 'You earn rewards on every visit. Show your QR at checkout to start earning.',
       });
+
+      // Compose user object and sign in
+      signInAs({
+        id: authUser.id,
+        name: profileRow.name,
+        email: profileRow.email,
+        phone: profileRow.phone,
+        birthday: profileRow.birthday,
+        birthdaySet: profileRow.birthday_set,
+        referralCode: profileRow.referral_code,
+        tier: 'Bronze',
+        rewardsBalance: 0,
+        lifetimeSpend: 0,
+        lifetimeEarned: 0,
+        orders: 0,
+        lastVisit: null,
+        status: 'active',
+        memberSince: profileRow.member_since,
+        role: 'customer',
+        supabaseBacked: true,
+      }, { liveMode: true });
+
       navigate('/');
     } catch (err) {
-      setError(err.message);
+      const msg = err?.message || 'Registration failed';
+      if (msg.includes('User already registered') || msg.includes('already been registered')) {
+        setError('An account with that email already exists.');
+      } else {
+        setError(msg);
+      }
       setSubmitting(false);
     }
   }
