@@ -5,8 +5,9 @@ import { useSettings } from '../../context/SettingsContext';
 import { useMenuStore } from '../../hooks/useMenuStore';
 import { useActivityLog } from '../../hooks/useActivityLog';
 import { useOrderStore } from '../../hooks/useOrderStore';
-import { useCustomerStats } from '../../hooks/useCustomerStats';
+import { useCustomerStats, getCustomerStats } from '../../hooks/useCustomerStats';
 import { useNotifications } from '../../hooks/useNotifications';
+import { isLive } from '../../utils/sessionMode';
 import {
   ScanLine, XCircle, LogOut, ChevronRight,
   CheckCircle, ArrowLeft, Star, Gift, Receipt,
@@ -24,11 +25,27 @@ function parseQr(raw) {
 /* ── STEP 1: Scan / select customer ─────────────────────────────── */
 function ScanStep({ onCustomerFound, notFound, setNotFound }) {
   const [scanning, setScanning] = useState(false);
+  const live = isLive();
+
+  // Build the shortcut list:
+  //  - live: only registered users (no demo customers)
+  //  - demo: demo customers
+  const shortcutList = (() => {
+    if (live) {
+      try {
+        const raw = localStorage.getItem('rr_registered_users');
+        const registered = raw ? JSON.parse(raw) : [];
+        return registered.filter(c => c.status === 'active');
+      } catch { return []; }
+    }
+    return adminCustomers.filter(c => c.status === 'active').slice(0, 4);
+  })();
 
   function handleScan(raw) {
     setScanning(false);
     const uid = parseQr(raw);
-    const found = adminCustomers.find(c => c.id === uid);
+    // Look up via the stats helper — covers both registered and demo customers
+    const found = getCustomerStats(uid);
     if (found) { setNotFound(false); onCustomerFound(found); }
     else        { setNotFound(true); }
   }
@@ -69,26 +86,35 @@ function ScanStep({ onCustomerFound, notFound, setNotFound }) {
         </div>
       )}
 
-      <div className="glass rounded-2xl p-4">
-        <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-3">
-          Demo — tap to simulate scan
-        </p>
-        <div className="space-y-1">
-          {adminCustomers.filter(c => c.status === 'active').map(c => (
-            <button key={c.id} onClick={() => handleScan(`rewards:${c.id}`)}
-              className="w-full flex items-center gap-3 text-left hover:bg-white/4 rounded-xl px-3 py-2.5 transition-colors group">
-              <div className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center text-black text-xs font-bold shrink-0">
-                {c.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-white font-semibold truncate">{c.name}</p>
-                <p className="text-xs text-neutral-500">{c.tier} · ${c.rewardsBalance.toFixed(2)} balance</p>
-              </div>
-              <ChevronRight size={14} className="text-neutral-600 group-hover:text-neutral-400 transition-colors shrink-0" />
-            </button>
-          ))}
+      {shortcutList.length > 0 && (
+        <div className="glass rounded-2xl p-4">
+          <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-3">
+            {live ? 'Registered Customers' : 'Demo — tap to simulate scan'}
+          </p>
+          <div className="space-y-1">
+            {shortcutList.map(c => (
+              <button key={c.id} onClick={() => handleScan(`rewards:${c.id}`)}
+                className="w-full flex items-center gap-3 text-left hover:bg-white/4 rounded-xl px-3 py-2.5 transition-colors group">
+                <div className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center text-black text-xs font-bold shrink-0">
+                  {c.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white font-semibold truncate">{c.name}</p>
+                  <p className="text-xs text-neutral-500">{c.tier} · ${(c.rewardsBalance ?? 0).toFixed(2)} balance</p>
+                </div>
+                <ChevronRight size={14} className="text-neutral-600 group-hover:text-neutral-400 transition-colors shrink-0" />
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+      {live && shortcutList.length === 0 && (
+        <div className="glass rounded-2xl py-8 text-center text-xs text-neutral-500 leading-relaxed px-6">
+          No registered customers yet.<br />
+          They'll appear here after they sign up at <span className="text-amber-400 font-mono">/register</span>
+          &nbsp;or scan a QR.
+        </div>
+      )}
     </>
   );
 }
