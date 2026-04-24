@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
-import { ChevronRight, Flame, TrendingUp, Star } from 'lucide-react';
+import { ChevronRight, Flame, TrendingUp, Star, Bell, Target, Trophy } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { usePromotionsStore } from '../hooks/usePromotionsStore';
+import { useNotifications } from '../hooks/useNotifications';
+import { useChallenges } from '../hooks/useChallenges';
 import { orders, restaurants, tierConfig } from '../data/mockData';
 
 function RewardsCard({ currentUser }) {
@@ -117,7 +119,11 @@ function ActivePromo() {
 export default function Dashboard() {
   const { user: currentUser } = useAuth();
   const { rewardRate } = useSettings();
-  const recentOrders = orders.slice(0, 3);
+  const { unreadCount } = useNotifications(currentUser?.id);
+  const { challenges } = useChallenges(currentUser?.id);
+  const recentOrders = orders.filter(o => o.userId === currentUser?.id).slice(0, 3);
+  const claimableChallenges = challenges.filter(c => c.completed && !c.claimedAt).length;
+  const activeChallenge = challenges.find(c => !c.claimedAt);
 
   return (
     <div className="px-4 pt-6 pb-8 max-w-lg mx-auto">
@@ -126,8 +132,19 @@ export default function Dashboard() {
           <p className="text-xs text-neutral-500 uppercase tracking-widest font-medium">Restaurant Group</p>
           <h1 className="text-2xl font-bold text-white tracking-tight">Rewards</h1>
         </div>
-        <div className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-black font-bold text-sm">
-          {currentUser.name.split(' ').map(n => n[0]).join('')}
+        <div className="flex items-center gap-2">
+          <Link to="/notifications"
+            className="relative w-10 h-10 rounded-full glass flex items-center justify-center text-neutral-300 hover:text-white transition-colors">
+            <Bell size={18} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] rounded-full gradient-gold flex items-center justify-center text-[10px] font-bold text-black px-1">
+                {unreadCount}
+              </span>
+            )}
+          </Link>
+          <div className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center text-black font-bold text-sm">
+            {currentUser.name.split(' ').map(n => n[0]).join('')}
+          </div>
         </div>
       </div>
 
@@ -140,6 +157,37 @@ export default function Dashboard() {
       </div>
 
       <ActivePromo />
+
+      {/* Challenges widget */}
+      <Link to="/challenges"
+        className="block glass rounded-2xl p-4 mb-4 hover:bg-white/5 transition-colors">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+            claimableChallenges > 0
+              ? 'bg-amber-500/15 border border-amber-500/30'
+              : 'bg-neutral-800/60 border border-white/5'
+          }`}>
+            {claimableChallenges > 0
+              ? <Trophy size={17} className="text-amber-400" />
+              : <Target size={17} className="text-neutral-400" />
+            }
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-bold text-white">Challenges</p>
+              {claimableChallenges > 0 && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400">
+                  {claimableChallenges} ready
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-neutral-500 mt-0.5 truncate">
+              {activeChallenge ? activeChallenge.description : 'All done for this month'}
+            </p>
+          </div>
+          <ChevronRight size={16} className="text-neutral-500 shrink-0" />
+        </div>
+      </Link>
 
       <div className="glass rounded-2xl p-4 mb-4">
         <div className="flex items-center justify-between mb-2">

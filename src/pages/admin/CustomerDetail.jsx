@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { adminCustomers, restaurants, orders, tierConfig } from '../../data/mockData';
 import { useSettings } from '../../context/SettingsContext';
+import { createPortal } from 'react-dom';
+import { useNotifications } from '../../hooks/useNotifications';
 import {
   ArrowLeft, Mail, Phone, Calendar, Plus, Minus, Check, Edit2, Ban, RefreshCw,
-  ChevronDown, ChevronUp, Receipt, Clock, Star, User as UserIcon
+  ChevronDown, ChevronUp, Receipt, Clock, Star, User as UserIcon, Send, X, MessageSquare
 } from 'lucide-react';
 
 function InfoRow({ label, value }) {
@@ -109,14 +111,67 @@ function OrderCard({ order }) {
   );
 }
 
+function MessageModal({ customer, onClose, onSend }) {
+  const [title, setTitle] = useState('');
+  const [body, setBody]   = useState('');
+
+  function submit(e) {
+    e.preventDefault();
+    if (!title.trim() || !body.trim()) return;
+    onSend({ title: title.trim(), body: body.trim() });
+    onClose();
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="w-full max-w-lg bg-[#0f0f18] border border-white/8 rounded-t-3xl sm:rounded-3xl p-5">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <MessageSquare size={16} className="text-amber-400" />
+            <h2 className="text-base font-bold text-white">Message {customer.name}</h2>
+          </div>
+          <button onClick={onClose} className="text-neutral-500 hover:text-white transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="space-y-3">
+          <input required value={title} onChange={e => setTitle(e.target.value)}
+            placeholder="Subject (e.g. Exclusive offer for you)"
+            className="w-full bg-neutral-900 border border-white/8 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-600 outline-none focus:border-amber-500/50 transition-colors" />
+          <textarea required value={body} onChange={e => setBody(e.target.value)}
+            placeholder="Message…" rows={4}
+            className="w-full bg-neutral-900 border border-white/8 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-600 outline-none focus:border-amber-500/50 transition-colors resize-none" />
+          <p className="text-xs text-neutral-500">Sends in-app notification + email. Customer sees this in their Notifications tab.</p>
+          <button type="submit"
+            className="w-full gradient-gold text-black font-bold py-3 rounded-xl text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2">
+            <Send size={15} /> Send Message
+          </button>
+        </form>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 export default function CustomerDetail() {
   const { id } = useParams();
   const { rewardRate } = useSettings();
+  const { addNotification } = useNotifications();
   const [customer, setCustomer] = useState(adminCustomers.find(c => c.id === id));
   const [adjustAmount, setAdjustAmount] = useState('');
   const [adjustNote, setAdjustNote]     = useState('');
   const [adjustSuccess, setAdjustSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState('orders'); // 'orders' | 'info'
+  const [showMessage, setShowMessage]     = useState(false);
+  const [messageSent, setMessageSent]     = useState(false);
+
+  function handleSendMessage({ title, body }) {
+    addNotification({ userId: customer.id, type: 'message', title, body });
+    setMessageSent(true);
+    setTimeout(() => setMessageSent(false), 2500);
+  }
 
   if (!customer) return (
     <div className="flex flex-col items-center gap-4 pt-20 text-neutral-500">
@@ -305,6 +360,7 @@ export default function CustomerDetail() {
           <div className="glass rounded-2xl p-4">
             <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-3">Actions</p>
             <div className="flex flex-wrap gap-2">
+              <ActionButton icon={MessageSquare} label={messageSent ? 'Sent!' : 'Send Message'} onClick={() => setShowMessage(true)} />
               <ActionButton icon={Edit2}     label="Edit Profile"    />
               <ActionButton icon={RefreshCw} label="Resend Welcome"  />
               <ActionButton
@@ -316,6 +372,12 @@ export default function CustomerDetail() {
             </div>
           </div>
         </>
+      )}
+
+      {showMessage && (
+        <MessageModal customer={customer}
+          onSend={handleSendMessage}
+          onClose={() => setShowMessage(false)} />
       )}
     </div>
   );

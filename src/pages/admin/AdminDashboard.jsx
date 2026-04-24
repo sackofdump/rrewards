@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { adminCustomers, restaurants, tierConfig } from '../../data/mockData';
 import { useMenuStore } from '../../hooks/useMenuStore';
 import { useSettings } from '../../context/SettingsContext';
-import { Search, Users, TrendingUp, DollarSign, ChevronRight, Shield, UtensilsCrossed, Download, Flame, Settings as SettingsIcon } from 'lucide-react';
+import { exportCustomersCSV, exportOrdersCSV } from '../../utils/generateCSV';
+import { Search, Users, TrendingUp, DollarSign, ChevronRight, Shield, UtensilsCrossed, Download, Flame, Settings as SettingsIcon, BarChart3, FileSpreadsheet } from 'lucide-react';
 
 function StatCard({ icon: Icon, label, value, sub }) {
   return (
@@ -118,6 +119,18 @@ export default function AdminDashboard() {
           <ChevronRight size={16} className="text-neutral-500 shrink-0" />
         </Link>
 
+        <Link to="/admin/analytics"
+          className="glass rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition-all">
+          <div className="w-11 h-11 rounded-xl bg-violet-500/15 border border-violet-500/25 flex items-center justify-center shrink-0">
+            <BarChart3 size={18} className="text-violet-400" />
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-sm font-bold text-white">Analytics</p>
+            <p className="text-xs text-neutral-500 mt-0.5">Charts & trends</p>
+          </div>
+          <ChevronRight size={16} className="text-neutral-500 shrink-0" />
+        </Link>
+
         <Link to="/admin/settings"
           className="glass rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition-all">
           <div className="w-11 h-11 rounded-xl bg-white/8 border border-white/10 flex items-center justify-center shrink-0">
@@ -130,19 +143,25 @@ export default function AdminDashboard() {
           <ChevronRight size={16} className="text-neutral-500 shrink-0" />
         </Link>
 
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
         <button onClick={handleDownload} disabled={downloading}
-          className="glass rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition-all text-left disabled:opacity-60">
-          <div className="w-11 h-11 rounded-xl bg-white/8 border border-white/10 flex items-center justify-center shrink-0">
-            {downloading
-              ? <div className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
-              : <Download size={18} className="text-amber-400" />
-            }
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-white">{downloading ? 'Generating…' : 'Download Report'}</p>
-            <p className="text-xs text-neutral-500 mt-0.5">PDF summary & data</p>
-          </div>
-          <ChevronRight size={16} className="text-neutral-500 shrink-0" />
+          className="glass rounded-xl p-3 flex items-center gap-2 hover:bg-white/5 transition-all text-left disabled:opacity-60">
+          {downloading
+            ? <div className="w-4 h-4 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin shrink-0" />
+            : <Download size={15} className="text-amber-400 shrink-0" />}
+          <span className="text-xs font-semibold text-white">{downloading ? 'Generating…' : 'PDF Report'}</span>
+        </button>
+        <button onClick={exportCustomersCSV}
+          className="glass rounded-xl p-3 flex items-center gap-2 hover:bg-white/5 transition-all">
+          <FileSpreadsheet size={15} className="text-green-400 shrink-0" />
+          <span className="text-xs font-semibold text-white">Export Customers</span>
+        </button>
+        <button onClick={exportOrdersCSV}
+          className="glass rounded-xl p-3 flex items-center gap-2 hover:bg-white/5 transition-all">
+          <FileSpreadsheet size={15} className="text-green-400 shrink-0" />
+          <span className="text-xs font-semibold text-white">Export Orders</span>
         </button>
       </div>
 

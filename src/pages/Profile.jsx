@@ -1,8 +1,8 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { tierConfig, orders } from '../data/mockData';
-import { User, Mail, Phone, Star, Utensils, Gift } from 'lucide-react';
+import { User, Mail, Phone, Star, Utensils, Gift, Cake, Users, ChevronRight } from 'lucide-react';
 
 export default function Profile() {
   const { user: currentUser, logout } = useAuth();
@@ -30,11 +30,25 @@ export default function Profile() {
         </div>
       </div>
 
+      <Link to="/referrals"
+        className="w-full glass-gold rounded-2xl p-4 mb-4 flex items-center gap-3 hover:brightness-110 transition-all">
+        <div className="w-11 h-11 rounded-xl gradient-gold flex items-center justify-center shrink-0">
+          <Users size={18} className="text-black" />
+        </div>
+        <div className="flex-1 text-left">
+          <p className="text-sm font-bold text-white">Refer Friends</p>
+          <p className="text-xs text-amber-300/70 mt-0.5">Give $10 · Get $10</p>
+        </div>
+        <ChevronRight size={16} className="text-amber-300/60" />
+      </Link>
+
       <div className="glass rounded-2xl p-4 mb-4 space-y-3">
         <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2">Contact Info</p>
         {[
           { icon: Mail,  label: 'Email',  value: currentUser.email },
           { icon: Phone, label: 'Phone',  value: currentUser.phone },
+          ...(currentUser.birthday ? [{ icon: Cake, label: 'Birthday',
+            value: new Date(currentUser.birthday).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) }] : []),
           { icon: User,  label: 'Member Since', value: new Date(currentUser.memberSince).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) },
         ].map(({ icon: Icon, label, value }) => (
           <div key={label} className="flex items-center gap-3">
@@ -51,7 +65,7 @@ export default function Profile() {
         {[
           { icon: Gift,     label: 'Rewards Balance', value: `$${currentUser.rewardsBalance.toFixed(2)}`, accent: true },
           { icon: Star,     label: 'Earn Rate',        value: `${rewardRate * 100}%`,                   accent: false },
-          { icon: Utensils, label: 'Total Visits',     value: orders.length,                              accent: false },
+          { icon: Utensils, label: 'Total Visits',     value: orders.filter(o => o.userId === currentUser.id).length, accent: false },
           { icon: Star,     label: 'Lifetime Spend',   value: `$${currentUser.lifetimeSpend.toFixed(0)}`, accent: false },
         ].map(({ icon: Icon, label, value, accent }) => (
           <div key={label} className={`rounded-2xl p-4 ${accent ? 'glass-gold' : 'glass'}`}>

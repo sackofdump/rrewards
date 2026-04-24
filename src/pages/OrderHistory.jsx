@@ -1,10 +1,18 @@
 import { orders, restaurants } from '../data/mockData';
-import { Package, ChevronDown, ChevronUp } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Package, ChevronDown, ChevronUp, RotateCcw, Check } from 'lucide-react';
 import { useState } from 'react';
 
 function OrderCard({ order }) {
   const [expanded, setExpanded] = useState(false);
+  const [reordered, setReordered] = useState(false);
   const restaurant = restaurants.find(r => r.id === order.restaurantId);
+
+  function handleReorder(e) {
+    e.stopPropagation();
+    setReordered(true);
+    setTimeout(() => setReordered(false), 2500);
+  }
 
   return (
     <div className="glass rounded-2xl overflow-hidden mb-3">
@@ -49,6 +57,14 @@ function OrderCard({ order }) {
               {order.status}
             </span>
           </div>
+
+          <button onClick={handleReorder}
+            className="w-full mt-3 gradient-gold text-black font-bold py-2.5 rounded-xl text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5">
+            {reordered
+              ? <><Check size={14} /> Saved for next visit</>
+              : <><RotateCcw size={14} /> Reorder</>
+            }
+          </button>
         </div>
       )}
     </div>
@@ -56,8 +72,10 @@ function OrderCard({ order }) {
 }
 
 export default function OrderHistory() {
-  const sortedOrders = [...orders].sort((a, b) => new Date(b.date) - new Date(a.date));
-  const totalRewards = orders.reduce((s, o) => s + o.rewards, 0);
+  const { user } = useAuth();
+  const userOrders = orders.filter(o => o.userId === user?.id);
+  const sortedOrders = [...userOrders].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const totalRewards = userOrders.reduce((s, o) => s + o.rewards, 0);
 
   return (
     <div className="px-4 pt-6 pb-8 max-w-lg mx-auto">
@@ -73,7 +91,7 @@ export default function OrderHistory() {
         </div>
         <div className="text-right">
           <p className="text-xs text-neutral-500 mb-0.5">Visits</p>
-          <p className="text-2xl font-bold text-white">{orders.length}</p>
+          <p className="text-2xl font-bold text-white">{userOrders.length}</p>
         </div>
       </div>
 
