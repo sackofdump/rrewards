@@ -62,9 +62,13 @@ function detectAnomaly(entry, recentEntries) {
   const now = new Date(entry.createdAt);
 
   if (entry.action === 'reward.apply') {
-    const { orderTotal = 0, rewardAmount = 0 } = entry.details || {};
-    if (orderTotal > 0) {
-      const ratio = rewardAmount / orderTotal;
+    // Rewards are earned on the pre-tax subtotal — compare to that, not
+    // the final total (which can be artificially low if the customer
+    // redeemed their balance against this purchase).
+    const { subtotal = 0, orderTotal = 0, rewardAmount = 0 } = entry.details || {};
+    const basis = subtotal > 0 ? subtotal : orderTotal;
+    if (basis > 0) {
+      const ratio = rewardAmount / basis;
       if (ratio > 0.15) {
         return {
           level: 'critical',
