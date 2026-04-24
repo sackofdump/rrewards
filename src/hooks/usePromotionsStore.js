@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { promotions as initialPromotions } from '../data/mockData';
+import { isLive, keyFor } from '../utils/sessionMode';
 
-const STORAGE_KEY = 'rr_promotions';
+const BASE_KEY = 'rr_promotions';
 
 function load() {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : initialPromotions;
-  } catch { return initialPromotions; }
+    const stored = localStorage.getItem(keyFor(BASE_KEY));
+    if (stored) return JSON.parse(stored);
+    return isLive() ? [] : initialPromotions;
+  } catch { return isLive() ? [] : initialPromotions; }
 }
 function save(items) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+  try { localStorage.setItem(keyFor(BASE_KEY), JSON.stringify(items)); }
   catch { /* ignore */ }
 }
 
@@ -37,7 +39,7 @@ export function usePromotionsStore() {
     setPromos(prev => prev.filter(p => p.id !== id));
   }
   function resetPromos() {
-    setPromos(initialPromotions);
+    setPromos(isLive() ? [] : initialPromotions);
   }
 
   return { promos, addPromo, updatePromo, removePromo, resetPromos };

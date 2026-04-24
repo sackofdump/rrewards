@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
 import { initialMenuItems } from '../data/mockData';
+import { isLive, keyFor } from '../utils/sessionMode';
 
-const STORAGE_KEY = 'rr_menu_items';
+const BASE_KEY = 'rr_menu_items';
 
 function loadMenu() {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : initialMenuItems;
+    const stored = localStorage.getItem(keyFor(BASE_KEY));
+    if (stored) return JSON.parse(stored);
+    return isLive() ? [] : initialMenuItems;
   } catch {
-    return initialMenuItems;
+    return isLive() ? [] : initialMenuItems;
   }
 }
 
 function saveMenu(items) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+  try { localStorage.setItem(keyFor(BASE_KEY), JSON.stringify(items)); }
   catch { /* ignore */ }
 }
 
@@ -32,7 +34,7 @@ export function useMenuStore() {
     setItems(prev => prev.filter(i => i.id !== id));
   }
   function resetMenu() {
-    setItems(initialMenuItems);
+    setItems(isLive() ? [] : initialMenuItems);
   }
 
   return { items, addItem, updateItem, removeItem, resetMenu };

@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react';
 import { adminCustomers } from '../data/mockData';
+import { isLive, keyFor } from '../utils/sessionMode';
 
-const STORAGE_KEY = 'rr_customer_stats';
+const STATS_BASE = 'rr_customer_stats';
 const REGISTERED_KEY = 'rr_registered_users';
 
 function loadOverrides() {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(keyFor(STATS_BASE));
     return stored ? JSON.parse(stored) : {};
   } catch { return {}; }
 }
 function saveOverrides(overrides) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides)); }
+  try { localStorage.setItem(keyFor(STATS_BASE), JSON.stringify(overrides)); }
   catch { /* ignore */ }
+}
+
+function demoCustomers() {
+  // In live mode, hide the hardcoded demo customers entirely.
+  return isLive() ? [] : adminCustomers;
 }
 function loadRegistered() {
   try {
@@ -34,7 +40,7 @@ export function getCustomerStats(customerId) {
   const registered = loadRegistered().find(u => u.id === customerId);
   if (registered) return registered;
 
-  const demo = adminCustomers.find(c => c.id === customerId);
+  const demo = demoCustomers().find(c => c.id === customerId);
   if (!demo) return null;
 
   const override = loadOverrides()[customerId] || {};
@@ -77,7 +83,7 @@ export function useCustomerStats() {
 
     // Demo customer — store as override
     const overrides = loadOverrides();
-    const demo = adminCustomers.find(c => c.id === customerId);
+    const demo = demoCustomers().find(c => c.id === customerId);
     if (!demo) return null;
     const current = { ...demo, ...(overrides[customerId] || {}) };
     const next = { ...current };
@@ -110,7 +116,7 @@ export function useCustomerStats() {
     const overrides = loadOverrides();
     overrides[customerId] = { ...(overrides[customerId] || {}), ...patch };
     // Recalc tier if lifetimeSpend in patch
-    const demo = adminCustomers.find(c => c.id === customerId);
+    const demo = demoCustomers().find(c => c.id === customerId);
     if (demo) {
       const combined = { ...demo, ...overrides[customerId] };
       overrides[customerId].tier = computeTier(combined.lifetimeSpend);

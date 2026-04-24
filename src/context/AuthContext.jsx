@@ -1,5 +1,5 @@
 import { createContext, useContext, useState } from 'react';
-import { adminCustomers, adminAccount, devAdminAccount } from '../data/mockData';
+import { adminCustomers, adminAccount, devAdminAccount, staffAccounts as demoStaff } from '../data/mockData';
 import { hashPassword } from '../hooks/useUserStore';
 import { getAllStaff } from '../hooks/useStaffStore';
 
@@ -25,7 +25,7 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  function login(email, password, role = 'customer') {
+  function login(email, password, role = 'customer', { liveMode = false } = {}) {
     setLoading(true);
     setError('');
     return new Promise((resolve, reject) => {
@@ -59,7 +59,10 @@ export function AuthProvider({ children }) {
             found = { ...found, role: 'customer' };
           }
         } else if (role === 'staff') {
-          found = getAllStaff().find(s => s.email.toLowerCase() === email.toLowerCase());
+          // Try stored staff first (managers can add new ones), then fall
+          // back to demo defaults so the demo login always works.
+          found = getAllStaff().find(s => s.email.toLowerCase() === email.toLowerCase())
+               ?? demoStaff.find(s => s.email.toLowerCase() === email.toLowerCase());
           if (!found || password !== found.password) {
             setError('Invalid staff credentials.');
             setLoading(false); reject(); return;
@@ -78,17 +81,19 @@ export function AuthProvider({ children }) {
           found = { ...devAdminAccount };
         }
 
-        setUser(found);
-        localStorage.setItem('rr_user', JSON.stringify(found));
+        const marked = { ...found, liveMode };
+        setUser(marked);
+        localStorage.setItem('rr_user', JSON.stringify(marked));
         setLoading(false);
-        resolve(found);
+        resolve(marked);
       }, 700);
     });
   }
 
-  function signInAs(userObj) {
-    setUser(userObj);
-    localStorage.setItem('rr_user', JSON.stringify(userObj));
+  function signInAs(userObj, { liveMode = false } = {}) {
+    const marked = { ...userObj, liveMode };
+    setUser(marked);
+    localStorage.setItem('rr_user', JSON.stringify(marked));
   }
 
   function logout() {

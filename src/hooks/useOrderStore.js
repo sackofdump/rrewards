@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { orders as mockOrders } from '../data/mockData';
+import { isLive, keyFor } from '../utils/sessionMode';
 
-const STORAGE_KEY = 'rr_orders';
+const BASE_KEY = 'rr_orders';
 
-function loadCustom() {
+function load() {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const stored = localStorage.getItem(keyFor(BASE_KEY));
     return stored ? JSON.parse(stored) : [];
   } catch { return []; }
 }
 function saveCustom(items) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+  try { localStorage.setItem(keyFor(BASE_KEY), JSON.stringify(items)); }
   catch { /* ignore */ }
 }
 
@@ -20,10 +21,10 @@ function genOrderId() {
 }
 
 let listeners = [];
-function notify() { listeners.forEach(fn => fn(loadCustom())); }
+function notify() { listeners.forEach(fn => fn(load())); }
 
 export function useOrderStore() {
-  const [custom, setCustom] = useState(loadCustom);
+  const [custom, setCustom] = useState(load);
 
   useEffect(() => {
     function onChange(next) { setCustom(next); }
@@ -31,10 +32,11 @@ export function useOrderStore() {
     return () => { listeners = listeners.filter(l => l !== onChange); };
   }, []);
 
-  const all = [...mockOrders, ...custom];
+  // In live mode: only real orders (no demo seeds). In demo: seeds + custom.
+  const all = isLive() ? custom : [...mockOrders, ...custom];
 
   function addOrder(data) {
-    const next = loadCustom();
+    const next = load();
     const newOrder = {
       id: genOrderId(),
       date: new Date().toISOString(),

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSettings } from '../context/SettingsContext';
+import { isLive, keyFor } from '../utils/sessionMode';
 
-const STORAGE_KEY = 'rr_referrals';
+const BASE_KEY = 'rr_referrals';
 
 const DEFAULT_REFERRALS = {
   u001: [
@@ -13,12 +14,13 @@ const DEFAULT_REFERRALS = {
 
 function load() {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : DEFAULT_REFERRALS;
-  } catch { return DEFAULT_REFERRALS; }
+    const stored = localStorage.getItem(keyFor(BASE_KEY));
+    if (stored) return JSON.parse(stored);
+    return isLive() ? {} : DEFAULT_REFERRALS;
+  } catch { return isLive() ? {} : DEFAULT_REFERRALS; }
 }
 function save(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+  try { localStorage.setItem(keyFor(BASE_KEY), JSON.stringify(data)); }
   catch { /* ignore */ }
 }
 

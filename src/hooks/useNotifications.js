@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { isLive, keyFor } from '../utils/sessionMode';
 
-const STORAGE_KEY = 'rr_notifications';
+const BASE_KEY = 'rr_notifications';
 
 const DEFAULT_NOTIFICATIONS = [
   {
@@ -61,12 +62,13 @@ const DEFAULT_NOTIFICATIONS = [
 
 function load() {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : DEFAULT_NOTIFICATIONS;
-  } catch { return DEFAULT_NOTIFICATIONS; }
+    const stored = localStorage.getItem(keyFor(BASE_KEY));
+    if (stored) return JSON.parse(stored);
+    return isLive() ? [] : DEFAULT_NOTIFICATIONS;
+  } catch { return isLive() ? [] : DEFAULT_NOTIFICATIONS; }
 }
 function save(items) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+  try { localStorage.setItem(keyFor(BASE_KEY), JSON.stringify(items)); }
   catch { /* ignore */ }
 }
 

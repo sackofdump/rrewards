@@ -24,7 +24,7 @@ export default function SignIn() {
   async function handleSubmit(e) {
     e.preventDefault();
     try {
-      await login(email, password, role);
+      await login(email, password, role, { liveMode: true });
       navigate({ customer: '/', staff: '/staff', admin: '/admin' }[role]);
     } catch { /* error set in context */ }
   }

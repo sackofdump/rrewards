@@ -56,7 +56,7 @@ export default function Register() {
     setSubmitting(true);
     try {
       const newUser = register({ name, email, password, phone, birthday });
-      signInAs({ ...newUser, role: 'customer' });
+      signInAs({ ...newUser, role: 'customer' }, { liveMode: true });
       addNotification({
         userId: newUser.id,
         type: 'welcome',

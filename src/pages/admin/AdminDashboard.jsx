@@ -4,6 +4,7 @@ import { adminCustomers, restaurants, tierConfig } from '../../data/mockData';
 import { useMenuStore } from '../../hooks/useMenuStore';
 import { useSettings } from '../../context/SettingsContext';
 import { useCustomerStats } from '../../hooks/useCustomerStats';
+import { isLive } from '../../utils/sessionMode';
 import { exportCustomersCSV, exportOrdersCSV } from '../../utils/generateCSV';
 import { useActivityLog } from '../../hooks/useActivityLog';
 import { Search, Users, TrendingUp, DollarSign, ChevronRight, Shield, UtensilsCrossed, Download, Flame, Settings as SettingsIcon, BarChart3, FileSpreadsheet, Target, ShieldAlert, UserCog } from 'lucide-react';
@@ -55,8 +56,15 @@ export default function AdminDashboard() {
   const { entries } = useActivityLog();
   const { get } = useCustomerStats();
   const staffAnomalies = entries.filter(e => e.actorRole === 'staff' && e.anomaly).length;
-  // Merge in live stats overrides so balances reflect staff transactions
-  const liveCustomers = adminCustomers.map(c => ({ ...c, ...(get(c.id) || {}) }));
+  // In live mode, show only registered users. In demo mode, show demo customers + registered.
+  const registered = (() => {
+    try {
+      const raw = localStorage.getItem('rr_registered_users');
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  })();
+  const baseCustomers = isLive() ? registered : [...adminCustomers, ...registered];
+  const liveCustomers = baseCustomers.map(c => ({ ...c, ...(get(c.id) || {}) }));
 
   const [downloading, setDownloading] = useState(false);
 

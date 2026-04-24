@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { isLive, keyFor } from '../utils/sessionMode';
 
-const STORAGE_KEY = 'rr_activity_log';
+const BASE_KEY = 'rr_activity_log';
 
 const DEFAULT_LOG = [
   {
@@ -23,12 +24,13 @@ const DEFAULT_LOG = [
 
 function load() {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : DEFAULT_LOG;
-  } catch { return DEFAULT_LOG; }
+    const stored = localStorage.getItem(keyFor(BASE_KEY));
+    if (stored) return JSON.parse(stored);
+    return isLive() ? [] : DEFAULT_LOG;
+  } catch { return isLive() ? [] : DEFAULT_LOG; }
 }
 function save(items) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+  try { localStorage.setItem(keyFor(BASE_KEY), JSON.stringify(items)); }
   catch { /* ignore */ }
 }
 

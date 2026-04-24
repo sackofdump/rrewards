@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { staffAccounts as defaultStaff } from '../data/mockData';
+import { isLive, keyFor } from '../utils/sessionMode';
 
-const STORAGE_KEY = 'rr_staff_accounts';
+const BASE_KEY = 'rr_staff_accounts';
 
 function load() {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : defaultStaff;
-  } catch { return defaultStaff; }
+    const stored = localStorage.getItem(keyFor(BASE_KEY));
+    if (stored) return JSON.parse(stored);
+    return isLive() ? [] : defaultStaff;
+  } catch { return isLive() ? [] : defaultStaff; }
 }
 function save(items) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+  try { localStorage.setItem(keyFor(BASE_KEY), JSON.stringify(items)); }
   catch { /* ignore */ }
 }
 
@@ -61,7 +63,7 @@ export function useStaffStore() {
   }
 
   function resetStaff() {
-    save(defaultStaff);
+    save(isLive() ? [] : defaultStaff);
     notify();
   }
 
