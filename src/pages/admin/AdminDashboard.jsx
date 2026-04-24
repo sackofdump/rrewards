@@ -1,10 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { adminCustomers, restaurants, tierConfig } from '../../data/mockData';
 import { useMenuStore } from '../../hooks/useMenuStore';
 import { useSettings } from '../../context/SettingsContext';
 import { useCustomerStats } from '../../hooks/useCustomerStats';
 import { isLive } from '../../utils/sessionMode';
+import { supabase } from '../../lib/supabase';
+
+function profileRowToCustomer(p) {
+  return {
+    id: p.id,
+    name: p.name,
+    email: p.email,
+    phone: p.phone,
+    tier: p.tier ?? 'Bronze',
+    rewardsBalance: Number(p.rewards_balance ?? 0),
+    lifetimeSpend:  Number(p.lifetime_spend ?? 0),
+    lifetimeEarned: Number(p.lifetime_earned ?? 0),
+    orders: Number(p.orders_count ?? 0),
+    lastVisit: p.last_visit,
+    status: p.status ?? 'active',
+    memberSince: p.member_since,
+    birthday: p.birthday,
+    referralCode: p.referral_code,
+    supabaseBacked: true,
+  };
+}
 import { exportCustomersCSV, exportOrdersCSV } from '../../utils/generateCSV';
 import { useActivityLog } from '../../hooks/useActivityLog';
 import { Search, Users, TrendingUp, DollarSign, ChevronRight, Shield, UtensilsCrossed, Download, Flame, Settings as SettingsIcon, BarChart3, FileSpreadsheet, Target, ShieldAlert, UserCog } from 'lucide-react';
@@ -56,14 +77,37 @@ export default function AdminDashboard() {
   const { entries } = useActivityLog();
   const { get } = useCustomerStats();
   const staffAnomalies = entries.filter(e => e.actorRole === 'staff' && e.anomaly).length;
-  // In live mode, show only registered users. In demo mode, show demo customers + registered.
-  const registered = (() => {
+
+  // Fetch Supabase profiles in live mode
+  const [supabaseCustomers, setSupabaseCustomers] = useState([]);
+  useEffect(() => {
+    if (!isLive()) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!cancelled && data) {
+        setSupabaseCustomers(data.map(profileRowToCustomer));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Legacy local-storage registered users (pre-Supabase)
+  const legacyRegistered = (() => {
     try {
       const raw = localStorage.getItem('rr_registered_users');
       return raw ? JSON.parse(raw) : [];
     } catch { return []; }
   })();
-  const baseCustomers = isLive() ? registered : [...adminCustomers, ...registered];
+
+  // Live mode → only Supabase customers (+ legacy local for back-compat)
+  // Demo mode → demo customers + any legacy local
+  const baseCustomers = isLive()
+    ? [...supabaseCustomers, ...legacyRegistered]
+    : [...adminCustomers, ...legacyRegistered];
   const liveCustomers = baseCustomers.map(c => ({ ...c, ...(get(c.id) || {}) }));
 
   const [downloading, setDownloading] = useState(false);

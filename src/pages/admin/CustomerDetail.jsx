@@ -5,9 +5,12 @@ import { useSettings } from '../../context/SettingsContext';
 import { useOrderStore } from '../../hooks/useOrderStore';
 import { useCustomerStats } from '../../hooks/useCustomerStats';
 import { createPortal } from 'react-dom';
+import { useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useActivityLog } from '../../hooks/useActivityLog';
+import { supabase } from '../../lib/supabase';
+import { isLive } from '../../utils/sessionMode';
 import {
   ArrowLeft, Mail, Phone, Calendar, Plus, Minus, Check, Edit2, Ban, RefreshCw,
   ChevronDown, ChevronUp, Receipt, Clock, Star, User as UserIcon, Send, X, MessageSquare
@@ -167,8 +170,41 @@ export default function CustomerDetail() {
   const { logAction } = useActivityLog();
   const { get: getCustomer, applyDelta, setStat } = useCustomerStats();
   const { getByUser } = useOrderStore();
-  // Live customer (merges overrides + registered users)
-  const customer = getCustomer(id) ?? adminCustomers.find(c => c.id === id);
+  // Start with local lookup, then hydrate from Supabase if not found
+  const [supabaseCustomer, setSupabaseCustomer] = useState(null);
+  useEffect(() => {
+    if (!isLive()) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+      if (!cancelled && data) {
+        setSupabaseCustomer({
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          birthday: data.birthday,
+          tier: data.tier ?? 'Bronze',
+          rewardsBalance: Number(data.rewards_balance ?? 0),
+          lifetimeSpend:  Number(data.lifetime_spend ?? 0),
+          lifetimeEarned: Number(data.lifetime_earned ?? 0),
+          orders: Number(data.orders_count ?? 0),
+          lastVisit: data.last_visit,
+          status: data.status ?? 'active',
+          memberSince: data.member_since,
+          referralCode: data.referral_code,
+          supabaseBacked: true,
+        });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id]);
+
+  const customer = getCustomer(id) ?? supabaseCustomer ?? adminCustomers.find(c => c.id === id);
   const customerOrders = getByUser(id).sort((a, b) => new Date(b.date) - new Date(a.date));
   const [adjustAmount, setAdjustAmount] = useState('');
   const [adjustNote, setAdjustNote]     = useState('');
