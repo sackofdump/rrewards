@@ -147,9 +147,9 @@ alter table public.app_settings   enable row level security;
 
 -- Open policies for demo purposes — any authenticated or anon user can
 -- read/write. In production, lock these down to specific roles.
-create policy "anyone can select profiles"       on public.profiles       for select using (true);
-create policy "authed can insert their profile"  on public.profiles       for insert with check (auth.uid() = id);
-create policy "owner can update profile"         on public.profiles       for update using (auth.uid() = id);
+create policy "anyone can select profiles"  on public.profiles  for select using (true);
+create policy "anyone can insert profile"   on public.profiles  for insert with check (true);
+create policy "anyone can update profile"   on public.profiles  for update using (true);
 
 create policy "anyone can select orders"         on public.orders         for select using (true);
 create policy "anyone can insert order"          on public.orders         for insert with check (true);
