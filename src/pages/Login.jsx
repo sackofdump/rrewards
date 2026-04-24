@@ -94,7 +94,14 @@ export default function Login() {
           })}
         </div>
 
-        <div className="mt-10 text-center">
+        <div className="mt-8 text-center space-y-3">
+          <div className="pt-2 border-t border-white/5">
+            <p className="text-xs text-neutral-500 mb-2 pt-3">Want to test with real sign-up?</p>
+            <Link to="/signin"
+              className="inline-block text-xs font-semibold text-amber-400 hover:text-amber-300 transition-colors">
+              Use real sign-in / register →
+            </Link>
+          </div>
           <Link to="/dev-login"
             className="inline-flex items-center gap-1.5 text-[11px] text-neutral-700 hover:text-violet-400 transition-colors">
             <Terminal size={10} /> Dev access

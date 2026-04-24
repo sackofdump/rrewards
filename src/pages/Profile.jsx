@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
+import { useUserStore } from '../hooks/useUserStore';
 
 import { tierConfig, orders } from '../data/mockData';
 import { User, Mail, Phone, Star, Utensils, Gift, Cake, Users, ChevronRight, Lock, AlertTriangle, X } from 'lucide-react';
@@ -74,18 +75,25 @@ export default function Profile() {
   const navigate = useNavigate();
   const tier = tierConfig[currentUser.tier];
   const nextTier ={ Bronze: 'Silver', Silver: 'Gold', Gold: 'Platinum', Platinum: null }[currentUser.tier];
+  const { findByEmail, setBirthday: setRegisteredBirthday } = useUserStore();
   const [showBirthdayModal, setShowBirthdayModal] = useState(false);
-  const [birthday, setBirthday] = useState(() => {
-    // Load from localStorage; falls back to mock data birthday
-    try {
-      const stored = localStorage.getItem(`rr_birthday_${currentUser.id}`);
-      return stored || currentUser.birthday || null;
-    } catch { return currentUser.birthday || null; }
-  });
+
+  // Registered user? pull current birthday from store (to reflect updates). Else fall back.
+  const registeredUser = currentUser.email ? findByEmail(currentUser.email) : null;
+  const birthday = registeredUser
+    ? registeredUser.birthday
+    : (() => {
+        try { return localStorage.getItem(`rr_birthday_${currentUser.id}`); }
+        catch { return null; }
+      })() || currentUser.birthday || null;
+  const birthdayLocked = registeredUser ? registeredUser.birthdaySet : Boolean(birthday);
 
   function handleSetBirthday(dateStr) {
-    try { localStorage.setItem(`rr_birthday_${currentUser.id}`, dateStr); } catch {}
-    setBirthday(dateStr);
+    if (registeredUser) {
+      setRegisteredBirthday(registeredUser.id, dateStr);
+    } else {
+      try { localStorage.setItem(`rr_birthday_${currentUser.id}`, dateStr); } catch {}
+    }
   }
 
   return (
@@ -145,7 +153,7 @@ export default function Profile() {
                 <p className="text-sm text-white font-medium">
                   {new Date(birthday).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
                 </p>
-                <Lock size={10} className="text-neutral-600" />
+                {birthdayLocked && <Lock size={10} className="text-neutral-600" />}
               </div>
             ) : (
               <button onClick={() => setShowBirthdayModal(true)}

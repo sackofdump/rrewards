@@ -5,6 +5,8 @@ import { SettingsProvider } from './context/SettingsContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import BottomNav from './components/BottomNav';
 import Login from './pages/Login';
+import SignIn from './pages/SignIn';
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import OrderHistory from './pages/OrderHistory';
 import Restaurants from './pages/Restaurants';
@@ -115,6 +117,16 @@ function AppRouter() {
   if (pathname === '/login') return (
     <MobileShell>
       <Routes><Route path="/login" element={<Login />} /></Routes>
+    </MobileShell>
+  );
+  if (pathname === '/signin') return (
+    <MobileShell>
+      <Routes><Route path="/signin" element={<SignIn />} /></Routes>
+    </MobileShell>
+  );
+  if (pathname === '/register') return (
+    <MobileShell>
+      <Routes><Route path="/register" element={<Register />} /></Routes>
     </MobileShell>
   );
   if (pathname === '/dev-login') return (
