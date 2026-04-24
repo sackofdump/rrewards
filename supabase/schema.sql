@@ -145,6 +145,10 @@ create table if not exists public.pending_transactions (
   updated_at     timestamptz default now()
 );
 alter table public.pending_transactions enable row level security;
+drop policy if exists "anyone can select pending_tx" on public.pending_transactions;
+drop policy if exists "anyone can insert pending_tx" on public.pending_transactions;
+drop policy if exists "anyone can update pending_tx" on public.pending_transactions;
+drop policy if exists "anyone can delete pending_tx" on public.pending_transactions;
 create policy "anyone can select pending_tx" on public.pending_transactions for select using (true);
 create policy "anyone can insert pending_tx" on public.pending_transactions for insert with check (true);
 create policy "anyone can update pending_tx" on public.pending_transactions for update using (true);
@@ -179,40 +183,69 @@ alter table public.app_settings   enable row level security;
 
 -- Open policies for demo purposes — any authenticated or anon user can
 -- read/write. In production, lock these down to specific roles.
+-- drop-then-create makes the schema idempotent (safe to re-run).
+drop policy if exists "anyone can select profiles" on public.profiles;
+drop policy if exists "anyone can insert profile"  on public.profiles;
+drop policy if exists "anyone can update profile"  on public.profiles;
 create policy "anyone can select profiles"  on public.profiles  for select using (true);
 create policy "anyone can insert profile"   on public.profiles  for insert with check (true);
 create policy "anyone can update profile"   on public.profiles  for update using (true);
 
+drop policy if exists "anyone can select orders" on public.orders;
+drop policy if exists "anyone can insert order"  on public.orders;
 create policy "anyone can select orders"         on public.orders         for select using (true);
 create policy "anyone can insert order"          on public.orders         for insert with check (true);
 
+drop policy if exists "anyone can select notifications" on public.notifications;
+drop policy if exists "anyone can insert notifications" on public.notifications;
+drop policy if exists "anyone can update notifications" on public.notifications;
 create policy "anyone can select notifications"  on public.notifications  for select using (true);
 create policy "anyone can insert notifications"  on public.notifications  for insert with check (true);
 create policy "anyone can update notifications"  on public.notifications  for update using (true);
 
+drop policy if exists "anyone can select activity" on public.activity_log;
+drop policy if exists "anyone can insert activity" on public.activity_log;
+drop policy if exists "anyone can update activity" on public.activity_log;
 create policy "anyone can select activity"       on public.activity_log   for select using (true);
 create policy "anyone can insert activity"       on public.activity_log   for insert with check (true);
 create policy "anyone can update activity"       on public.activity_log   for update using (true);
 
+drop policy if exists "anyone can select staff" on public.staff_accounts;
+drop policy if exists "anyone can insert staff" on public.staff_accounts;
+drop policy if exists "anyone can update staff" on public.staff_accounts;
+drop policy if exists "anyone can delete staff" on public.staff_accounts;
 create policy "anyone can select staff"          on public.staff_accounts for select using (true);
 create policy "anyone can insert staff"          on public.staff_accounts for insert with check (true);
 create policy "anyone can update staff"          on public.staff_accounts for update using (true);
 create policy "anyone can delete staff"          on public.staff_accounts for delete using (true);
 
+drop policy if exists "anyone can select menu" on public.menu_items;
+drop policy if exists "anyone can insert menu" on public.menu_items;
+drop policy if exists "anyone can update menu" on public.menu_items;
+drop policy if exists "anyone can delete menu" on public.menu_items;
 create policy "anyone can select menu"           on public.menu_items     for select using (true);
 create policy "anyone can insert menu"           on public.menu_items     for insert with check (true);
 create policy "anyone can update menu"           on public.menu_items     for update using (true);
 create policy "anyone can delete menu"           on public.menu_items     for delete using (true);
 
+drop policy if exists "anyone can select promos" on public.promotions;
+drop policy if exists "anyone can insert promos" on public.promotions;
+drop policy if exists "anyone can update promos" on public.promotions;
+drop policy if exists "anyone can delete promos" on public.promotions;
 create policy "anyone can select promos"         on public.promotions     for select using (true);
 create policy "anyone can insert promos"         on public.promotions     for insert with check (true);
 create policy "anyone can update promos"         on public.promotions     for update using (true);
 create policy "anyone can delete promos"         on public.promotions     for delete using (true);
 
+drop policy if exists "anyone can select favorites" on public.favorites;
+drop policy if exists "anyone can insert favorites" on public.favorites;
+drop policy if exists "anyone can delete favorites" on public.favorites;
 create policy "anyone can select favorites"      on public.favorites      for select using (true);
 create policy "anyone can insert favorites"      on public.favorites      for insert with check (true);
 create policy "anyone can delete favorites"      on public.favorites      for delete using (true);
 
+drop policy if exists "anyone can select settings" on public.app_settings;
+drop policy if exists "anyone can update settings" on public.app_settings;
 create policy "anyone can select settings"       on public.app_settings   for select using (true);
 create policy "anyone can update settings"       on public.app_settings   for update using (true);
 

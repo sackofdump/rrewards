@@ -65,7 +65,8 @@ export function useCustomerStats() {
     if (isLive()) {
       (async () => {
         const today = new Date().toISOString().split('T')[0];
-        const { error } = await supabase.rpc('apply_profile_delta', {
+        // Try atomic RPC first
+        const { error: rpcErr } = await supabase.rpc('apply_profile_delta', {
           p_user_id:       customerId,
           p_balance_delta: patch.rewardsBalance ?? 0,
           p_spend_delta:   patch.lifetimeSpend ?? 0,
@@ -73,12 +74,31 @@ export function useCustomerStats() {
           p_orders_delta:  patch.orders ?? 0,
           p_last_visit:    patch.lastVisit ?? today,
         });
-        if (error) {
-          console.error('apply_profile_delta RPC failed', error);
-          // Fall through to local fallback on RPC failure
-          return fallbackLocalApply(customerId, patch);
+        if (!rpcErr) { notify(); return; }
+
+        // Fallback: direct fetch-modify-write (not atomic, but works)
+        console.warn('apply_profile_delta RPC missing/failed, using direct update', rpcErr);
+        const { data: current, error: fetchErr } = await supabase
+          .from('profiles').select('*').eq('id', customerId).maybeSingle();
+        if (fetchErr || !current) {
+          console.error('direct update fetch failed', fetchErr);
+          return;
         }
-        notify();
+        const newSpend    = Number(current.lifetime_spend ?? 0)  + (patch.lifetimeSpend  ?? 0);
+        const newBalance  = Math.max(0, Number(current.rewards_balance ?? 0) + (patch.rewardsBalance ?? 0));
+        const newEarned   = Number(current.lifetime_earned ?? 0) + (patch.lifetimeEarned ?? 0);
+        const newOrders   = Number(current.orders_count ?? 0)    + (patch.orders         ?? 0);
+        const nextTier    = computeTier(newSpend);
+        const { error: updErr } = await supabase.from('profiles').update({
+          rewards_balance: newBalance,
+          lifetime_spend:  newSpend,
+          lifetime_earned: newEarned,
+          orders_count:    newOrders,
+          last_visit:      patch.lastVisit ?? today,
+          tier:            nextTier,
+        }).eq('id', customerId);
+        if (updErr) console.error('direct update failed', updErr);
+        else notify();
       })();
       return;
     }

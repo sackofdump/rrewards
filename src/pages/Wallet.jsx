@@ -170,14 +170,12 @@ export default function Wallet() {
         <ChevronRight size={18} className="text-neutral-500 shrink-0" />
       </button>
 
-      <div className="glass rounded-2xl p-4 mb-6 flex justify-between items-center">
-        <div>
-          <p className="text-xs text-neutral-500 mb-0.5">Available Rewards</p>
-          <p className="text-2xl font-bold text-amber-400">${user.rewardsBalance.toFixed(2)}</p>
-        </div>
-        <button className="text-xs font-bold text-black px-4 py-2 rounded-xl gradient-gold hover:opacity-90 transition-opacity">
-          Redeem
-        </button>
+      <div className="glass rounded-2xl p-4 mb-6">
+        <p className="text-xs text-neutral-500 mb-0.5">Available Rewards</p>
+        <p className="text-2xl font-bold text-amber-400">${Number(user.rewardsBalance ?? 0).toFixed(2)}</p>
+        <p className="text-[11px] text-neutral-600 mt-1.5">
+          Apply at checkout — toggle "Redeem" when your cashier sends the bill to your device.
+        </p>
       </div>
 
       <div className="flex items-center justify-between mb-3">
