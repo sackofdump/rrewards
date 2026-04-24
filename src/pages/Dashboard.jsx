@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
 import { ChevronRight, Flame, TrendingUp, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { orders, restaurants, promotions, tierConfig, REWARDS_RATE } from '../data/mockData';
+import { useSettings } from '../context/SettingsContext';
+import { usePromotionsStore } from '../hooks/usePromotionsStore';
+import { orders, restaurants, tierConfig } from '../data/mockData';
 
 function RewardsCard({ currentUser }) {
   const tier = tierConfig[currentUser.tier];
@@ -89,7 +91,8 @@ function RecentOrder({ order }) {
 }
 
 function ActivePromo() {
-  const promo = promotions.find(p => p.active);
+  const { promos } = usePromotionsStore();
+  const promo = promos.find(p => p.active);
   if (!promo) return null;
   const restaurant = restaurants.find(r => r.id === promo.restaurantId);
   return (
@@ -113,6 +116,7 @@ function ActivePromo() {
 
 export default function Dashboard() {
   const { user: currentUser } = useAuth();
+  const { rewardRate } = useSettings();
   const recentOrders = orders.slice(0, 3);
 
   return (
@@ -132,7 +136,7 @@ export default function Dashboard() {
       <div className="flex gap-3 mb-6">
         <StatPill icon={TrendingUp} label="Lifetime Spend" value={`$${currentUser.lifetimeSpend.toFixed(0)}`} />
         <StatPill icon={Star}       label="Total Earned"   value={`$${currentUser.lifetimeEarned.toFixed(2)}`} />
-        <StatPill icon={Flame}      label="Earn Rate"      value={`${REWARDS_RATE * 100}%`} />
+        <StatPill icon={Flame}      label="Earn Rate"      value={`${(rewardRate * 100).toFixed(1).replace(/\.0$/, '')}%`} />
       </div>
 
       <ActivePromo />

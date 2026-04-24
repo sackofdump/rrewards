@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { adminCustomers, restaurants, orders, tierConfig, REWARDS_RATE } from '../../data/mockData';
+import { adminCustomers, restaurants, orders, tierConfig } from '../../data/mockData';
+import { useSettings } from '../../context/SettingsContext';
 import {
   ArrowLeft, Mail, Phone, Calendar, Plus, Minus, Check, Edit2, Ban, RefreshCw,
   ChevronDown, ChevronUp, Receipt, Clock, Star, User as UserIcon
@@ -110,6 +111,7 @@ function OrderCard({ order }) {
 
 export default function CustomerDetail() {
   const { id } = useParams();
+  const { rewardRate } = useSettings();
   const [customer, setCustomer] = useState(adminCustomers.find(c => c.id === id));
   const [adjustAmount, setAdjustAmount] = useState('');
   const [adjustNote, setAdjustNote]     = useState('');
@@ -270,7 +272,7 @@ export default function CustomerDetail() {
             <InfoRow label="Last Visit"      value={new Date(customer.lastVisit).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} />
             <InfoRow label="Lifetime Spend"  value={`$${customer.lifetimeSpend.toFixed(2)}`} />
             <InfoRow label="Lifetime Earned" value={`$${customer.lifetimeEarned.toFixed(2)}`} />
-            <InfoRow label="Earn Rate"       value={`${REWARDS_RATE * 100}%`} />
+            <InfoRow label="Earn Rate"       value={`${(rewardRate * 100).toFixed(1).replace(/\.0$/, '')}%`} />
           </div>
 
           <div className="glass rounded-2xl p-4 mb-4">

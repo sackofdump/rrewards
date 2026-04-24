@@ -1,10 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { tierConfig, orders, REWARDS_RATE } from '../data/mockData';
+import { useSettings } from '../context/SettingsContext';
+import { tierConfig, orders } from '../data/mockData';
 import { User, Mail, Phone, Star, Utensils, Gift } from 'lucide-react';
 
 export default function Profile() {
   const { user: currentUser, logout } = useAuth();
+  const { rewardRate } = useSettings();
   const navigate = useNavigate();
   const tier = tierConfig[currentUser.tier];
   const nextTier ={ Bronze: 'Silver', Silver: 'Gold', Gold: 'Platinum', Platinum: null }[currentUser.tier];
@@ -48,7 +50,7 @@ export default function Profile() {
       <div className="grid grid-cols-2 gap-3 mb-4">
         {[
           { icon: Gift,     label: 'Rewards Balance', value: `$${currentUser.rewardsBalance.toFixed(2)}`, accent: true },
-          { icon: Star,     label: 'Earn Rate',        value: `${REWARDS_RATE * 100}%`,                   accent: false },
+          { icon: Star,     label: 'Earn Rate',        value: `${rewardRate * 100}%`,                   accent: false },
           { icon: Utensils, label: 'Total Visits',     value: orders.length,                              accent: false },
           { icon: Star,     label: 'Lifetime Spend',   value: `$${currentUser.lifetimeSpend.toFixed(0)}`, accent: false },
         ].map(({ icon: Icon, label, value, accent }) => (

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { adminCustomers, restaurants, tierConfig, REWARDS_RATE } from '../../data/mockData';
+import { adminCustomers, restaurants, tierConfig } from '../../data/mockData';
 import { useMenuStore } from '../../hooks/useMenuStore';
-import { Search, Users, TrendingUp, DollarSign, ChevronRight, Shield, UtensilsCrossed, Download } from 'lucide-react';
+import { useSettings } from '../../context/SettingsContext';
+import { Search, Users, TrendingUp, DollarSign, ChevronRight, Shield, UtensilsCrossed, Download, Flame, Settings as SettingsIcon } from 'lucide-react';
 
 function StatCard({ icon: Icon, label, value, sub }) {
   return (
@@ -47,6 +48,7 @@ function CustomerRow({ customer }) {
 export default function AdminDashboard() {
   const [search, setSearch] = useState('');
   const { items: menuItems } = useMenuStore();
+  const { rewardRate } = useSettings();
 
   const [downloading, setDownloading] = useState(false);
 
@@ -54,7 +56,7 @@ export default function AdminDashboard() {
     setDownloading(true);
     try {
       const { generateReport } = await import('../../utils/generateReport');
-      generateReport(menuItems);
+      generateReport(menuItems, rewardRate);
     } finally {
       setDownloading(false);
     }
@@ -88,20 +90,44 @@ export default function AdminDashboard() {
         <StatCard icon={Users}      label="Members"        value={adminCustomers.length}      sub={`${activeCount} active`} />
         <StatCard icon={DollarSign} label="Rewards Out"    value={`$${totalBalance.toFixed(2)}`} sub="pending redemption" />
         <StatCard icon={TrendingUp} label="Total Spend"    value={`$${(totalSpend/1000).toFixed(1)}k`} sub="all time" />
-        <StatCard icon={DollarSign} label="Reward Rate"    value={`${REWARDS_RATE * 100}%`}   sub="standard cashback" />
+        <StatCard icon={DollarSign} label="Reward Rate"    value={`${rewardRate * 100}%`}   sub="standard cashback" />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
         <Link to="/admin/menu"
-          className="glass-gold rounded-2xl p-4 flex items-center gap-3 hover:brightness-110 transition-all">
-          <div className="w-11 h-11 rounded-xl gradient-gold flex items-center justify-center shrink-0">
-            <UtensilsCrossed size={20} className="text-black" />
+          className="glass rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition-all">
+          <div className="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center shrink-0">
+            <UtensilsCrossed size={18} className="text-amber-400" />
           </div>
           <div className="flex-1 text-left min-w-0">
             <p className="text-sm font-bold text-white">Menu Management</p>
-            <p className="text-xs text-neutral-400 mt-0.5">Add, edit & import items</p>
+            <p className="text-xs text-neutral-500 mt-0.5">Add, edit & import items</p>
           </div>
-          <ChevronRight size={16} className="text-neutral-400 shrink-0" />
+          <ChevronRight size={16} className="text-neutral-500 shrink-0" />
+        </Link>
+
+        <Link to="/admin/promotions"
+          className="glass rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition-all">
+          <div className="w-11 h-11 rounded-xl bg-rose-500/15 border border-rose-400/25 flex items-center justify-center shrink-0">
+            <Flame size={18} className="text-rose-400" />
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-sm font-bold text-white">Promotions</p>
+            <p className="text-xs text-neutral-500 mt-0.5">Create & manage promos</p>
+          </div>
+          <ChevronRight size={16} className="text-neutral-500 shrink-0" />
+        </Link>
+
+        <Link to="/admin/settings"
+          className="glass rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition-all">
+          <div className="w-11 h-11 rounded-xl bg-white/8 border border-white/10 flex items-center justify-center shrink-0">
+            <SettingsIcon size={18} className="text-neutral-300" />
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-sm font-bold text-white">Settings</p>
+            <p className="text-xs text-neutral-500 mt-0.5">Reward & tax rate</p>
+          </div>
+          <ChevronRight size={16} className="text-neutral-500 shrink-0" />
         </Link>
 
         <button onClick={handleDownload} disabled={downloading}
@@ -113,8 +139,8 @@ export default function AdminDashboard() {
             }
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-white">{downloading ? 'Generating PDF…' : 'Download Report'}</p>
-            <p className="text-xs text-neutral-500 mt-0.5">PDF with customers, revenue & items</p>
+            <p className="text-sm font-bold text-white">{downloading ? 'Generating…' : 'Download Report'}</p>
+            <p className="text-xs text-neutral-500 mt-0.5">PDF summary & data</p>
           </div>
           <ChevronRight size={16} className="text-neutral-500 shrink-0" />
         </button>

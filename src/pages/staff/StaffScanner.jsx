@@ -1,6 +1,7 @@
 import { useState, lazy, Suspense } from 'react';
-import { adminCustomers, restaurants, REWARDS_RATE, tierConfig, MENU_CATEGORIES } from '../../data/mockData';
+import { adminCustomers, restaurants, tierConfig, MENU_CATEGORIES } from '../../data/mockData';
 import { useAuth } from '../../context/AuthContext';
+import { useSettings } from '../../context/SettingsContext';
 import { useMenuStore } from '../../hooks/useMenuStore';
 import {
   ScanLine, XCircle, LogOut, ChevronRight,
@@ -10,7 +11,6 @@ import {
 
 const QrCameraScanner = lazy(() => import('../../components/QrCameraScanner'));
 
-const TAX_RATE = 0.08;
 
 function parseQr(raw) {
   if (raw.startsWith('rewards:')) return raw.replace('rewards:', '').trim();
@@ -92,6 +92,7 @@ function ScanStep({ onCustomerFound, notFound, setNotFound }) {
 /* ── STEP 2: Checkout ────────────────────────────────────────────── */
 function CheckoutStep({ customer, restaurantId, onComplete, onBack }) {
   const { items: allMenuItems } = useMenuStore();
+  const { rewardRate, taxRate } = useSettings();
   const [cart, setCart]             = useState([]); // [{ id, name, price, qty }]
   const [manualAmount, setManualAmount] = useState('');
   const [mode, setMode]             = useState('menu'); // 'menu' | 'manual'
@@ -109,8 +110,8 @@ function CheckoutStep({ customer, restaurantId, onComplete, onBack }) {
 
   const cartSubtotal = cart.reduce((s, it) => s + it.price * it.qty, 0);
   const sub = mode === 'menu' ? cartSubtotal : (parseFloat(manualAmount) || 0);
-  const tax = sub * TAX_RATE;
-  const earned = sub * REWARDS_RATE;
+  const tax = sub * taxRate;
+  const earned = sub * rewardRate;
   const redeemAmt = redeemOn ? Math.min(customer.rewardsBalance, sub + tax) : 0;
   const total = Math.max(0, sub + tax - redeemAmt);
 
@@ -275,7 +276,7 @@ function CheckoutStep({ customer, restaurantId, onComplete, onBack }) {
             <span className="text-white font-medium">${sub.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-neutral-400">Tax (8%)</span>
+            <span className="text-neutral-400">Tax ({(taxRate * 100).toFixed(1).replace(/\.0$/, '')}%)</span>
             <span className="text-white font-medium">${tax.toFixed(2)}</span>
           </div>
 
@@ -345,7 +346,7 @@ function ReceiptStep({ customer, tx, onNext }) {
       <div className="glass rounded-2xl p-5 w-full text-left space-y-2.5">
         {[
           { label: 'Subtotal',       value: `$${tx.subtotal.toFixed(2)}` },
-          { label: 'Tax (8%)',       value: `$${tx.tax.toFixed(2)}` },
+          { label: 'Tax',            value: `$${tx.tax.toFixed(2)}` },
           tx.redeemAmt > 0 && { label: 'Rewards Redeemed', value: `−$${tx.redeemAmt.toFixed(2)}`, accent: 'amber' },
           { label: 'Total Charged',  value: `$${tx.total.toFixed(2)}`, bold: true },
         ].filter(Boolean).map(({ label, value, accent, bold }) => (

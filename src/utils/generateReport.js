@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { adminCustomers, orders, restaurants, REWARDS_RATE } from '../data/mockData';
+import { adminCustomers, orders, restaurants } from '../data/mockData';
 
 const GOLD     = [212, 175, 55];
 const DARK     = [15, 15, 24];
@@ -12,7 +12,7 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export function generateReport(menuItems = []) {
+export function generateReport(menuItems = [], rewardRate = 0.03) {
   const doc = new jsPDF({ unit: 'pt', format: 'letter' });
   const pageW = doc.internal.pageSize.getWidth();
   let y = 40;
@@ -68,7 +68,7 @@ export function generateReport(menuItems = []) {
   const metrics = [
     ['Total Members',      String(totalMembers),        `${activeMembers} active`],
     ['Total Revenue',      fmt$(totalRevenue),          `${totalOrders} orders`],
-    ['Avg Order Value',    fmt$(avgOrderValue),         `at ${REWARDS_RATE * 100}% earn rate`],
+    ['Avg Order Value',    fmt$(avgOrderValue),         `at ${(rewardRate * 100).toFixed(1).replace(/\.0$/, '')}% earn rate`],
     ['Rewards Issued',     fmt$(rewardsIssued),         'all-time earned'],
     ['Rewards Redeemed',   fmt$(rewardsRedeemed),       'used by customers'],
     ['Rewards Outstanding', fmt$(rewardsOutstanding),   'pending redemption'],

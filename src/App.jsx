@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { SettingsProvider } from './context/SettingsContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import BottomNav from './components/BottomNav';
 import Login from './pages/Login';
@@ -11,6 +12,8 @@ import Profile from './pages/Profile';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import CustomerDetail from './pages/admin/CustomerDetail';
 import MenuManagement from './pages/admin/MenuManagement';
+import Settings from './pages/admin/Settings';
+import PromotionsAdmin from './pages/admin/PromotionsAdmin';
 import DevLogin from './pages/dev/DevLogin';
 import DevAdmin from './pages/dev/DevAdmin';
 import StaffScanner from './pages/staff/StaffScanner';
@@ -50,6 +53,8 @@ function AdminApp() {
           <Routes>
             <Route path="/admin"               element={<AdminDashboard />} />
             <Route path="/admin/menu"          element={<MenuManagement />} />
+            <Route path="/admin/settings"      element={<Settings />} />
+            <Route path="/admin/promotions"    element={<PromotionsAdmin />} />
             <Route path="/admin/customers/:id" element={<CustomerDetail />} />
           </Routes>
         </div>
@@ -108,7 +113,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRouter />
+        <SettingsProvider>
+          <AppRouter />
+        </SettingsProvider>
       </AuthProvider>
     </BrowserRouter>
   );

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { restaurantDetails, promotions } from '../data/mockData';
+import { restaurantDetails } from '../data/mockData';
+import { usePromotionsStore } from '../hooks/usePromotionsStore';
 import { MapPin, Phone, Clock, Star, ChevronRight, X, Percent } from 'lucide-react';
 
 function PromoChip({ promo }) {
@@ -13,7 +14,8 @@ function PromoChip({ promo }) {
 }
 
 function DetailSheet({ restaurant, onClose }) {
-  const promo = promotions.find(p => p.restaurantId === restaurant.id && p.active);
+  const { promos } = usePromotionsStore();
+  const promo = promos.find(p => p.restaurantId === restaurant.id && p.active);
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm"
       onClick={e => e.target === e.currentTarget && onClose()}>
@@ -66,7 +68,8 @@ function DetailSheet({ restaurant, onClose }) {
 }
 
 function RestaurantCard({ restaurant, onClick }) {
-  const promo = promotions.find(p => p.restaurantId === restaurant.id && p.active);
+  const { promos } = usePromotionsStore();
+  const promo = promos.find(p => p.restaurantId === restaurant.id && p.active);
   return (
     <button onClick={onClick}
       className="w-full glass rounded-2xl p-4 flex items-center gap-4 text-left hover:brightness-110 transition-all">
