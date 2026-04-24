@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useRestaurantStore } from '../../hooks/useRestaurantStore';
 import { useAllActivityLogs } from '../../hooks/useActivityLog';
+import { useSettings } from '../../context/SettingsContext';
 import { adminCustomers, staffAccounts } from '../../data/mockData';
 import {
   Terminal, LogOut, Plus, Edit2, Trash2, X,
@@ -123,6 +124,25 @@ export default function DevAdmin() {
   const { user, logout, login } = useAuth();
   const { all, addRestaurant, updateRestaurant, removeRestaurant, resetAll, overrides } = useRestaurantStore();
   const { entries } = useAllActivityLogs();
+  const { tierRates, update: updateSettings } = useSettings();
+  const [tierDraft, setTierDraft] = useState({
+    Bronze:   ((tierRates?.Bronze   ?? 0.03) * 100).toString(),
+    Silver:   ((tierRates?.Silver   ?? 0.04) * 100).toString(),
+    Gold:     ((tierRates?.Gold     ?? 0.05) * 100).toString(),
+    Platinum: ((tierRates?.Platinum ?? 0.06) * 100).toString(),
+  });
+  const [tierSaved, setTierSaved] = useState(false);
+
+  function saveTierRates() {
+    const next = {};
+    for (const [tier, val] of Object.entries(tierDraft)) {
+      const n = parseFloat(val);
+      if (!isNaN(n) && n >= 0 && n <= 100) next[tier] = n / 100;
+    }
+    updateSettings({ tierRates: next });
+    setTierSaved(true);
+    setTimeout(() => setTierSaved(false), 2000);
+  }
   const navigate = useNavigate();
   const [editing, setEditing] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -240,6 +260,52 @@ export default function DevAdmin() {
             <p className="text-xs text-neutral-500 mt-0.5">Log in as customer or staff</p>
           </div>
           <ChevronRight size={16} className="text-neutral-500 shrink-0" />
+        </button>
+      </div>
+
+      {/* Tier Reward Rates */}
+      <div className="glass rounded-2xl p-5 mb-5">
+        <div className="flex items-center gap-2 mb-1">
+          <Star size={14} className="text-violet-400" />
+          <h2 className="text-sm font-bold text-white uppercase tracking-wider">Tier Reward Rates</h2>
+        </div>
+        <p className="text-xs text-neutral-400 leading-relaxed mb-4">
+          Per-tier cashback percentages. Customers earn these rates on subtotal at checkout.
+        </p>
+
+        <div className="grid grid-cols-2 gap-2.5 mb-3">
+          {['Bronze', 'Silver', 'Gold', 'Platinum'].map(tier => {
+            const colors = {
+              Bronze:   { color: '#cd7f32', bg: 'rgba(205,127,50,0.1)',  border: 'rgba(205,127,50,0.3)' },
+              Silver:   { color: '#c0c0c0', bg: 'rgba(192,192,192,0.08)', border: 'rgba(192,192,192,0.25)' },
+              Gold:     { color: '#d4af37', bg: 'rgba(212,175,55,0.1)',   border: 'rgba(212,175,55,0.3)' },
+              Platinum: { color: '#e5e4e2', bg: 'rgba(229,228,226,0.08)', border: 'rgba(229,228,226,0.25)' },
+            }[tier];
+            return (
+              <div key={tier} className="rounded-xl p-3"
+                style={{ background: colors.bg, border: `1px solid ${colors.border}` }}>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: colors.color }}>
+                    {tier}
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="number" min="0" max="100" step="0.1"
+                    value={tierDraft[tier]}
+                    onChange={e => setTierDraft({ ...tierDraft, [tier]: e.target.value })}
+                    className="w-full bg-neutral-900 border border-white/8 rounded-lg px-3 py-2 pr-7 text-sm text-white outline-none focus:border-violet-400/50 transition-colors"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 text-xs">%</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <button onClick={saveTierRates}
+          className="w-full bg-violet-500 hover:bg-violet-400 text-white font-bold py-2.5 rounded-xl text-xs transition-colors">
+          {tierSaved ? 'Saved ✓' : 'Save Tier Rates'}
         </button>
       </div>
 

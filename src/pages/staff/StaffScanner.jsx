@@ -147,7 +147,8 @@ function ScanStep({ onCustomerFound, notFound, setNotFound }) {
 /* ── STEP 2: Checkout ────────────────────────────────────────────── */
 function CheckoutStep({ customer, restaurantId, onComplete, onBack }) {
   const { items: allMenuItems } = useMenuStore();
-  const { rewardRate, taxRate } = useSettings();
+  const { taxRate, rateForTier } = useSettings();
+  const rewardRate = rateForTier(customer.tier);
   const [cart, setCart]             = useState([]); // [{ id, name, price, qty }]
   const [manualAmount, setManualAmount] = useState('');
   const [mode, setMode]             = useState('menu'); // 'menu' | 'manual'
@@ -498,7 +499,8 @@ function ReceiptStep({ customer, tx, onNext }) {
 /* ── STEP 2 (LIVE): Build cart + send to customer device ─────────── */
 function LiveHandoffStep({ customer, restaurantId, staff, onFinalized, onBack }) {
   const { items: allMenuItems } = useMenuStore();
-  const { rewardRate, taxRate } = useSettings();
+  const { taxRate, rateForTier } = useSettings();
+  const rewardRate = rateForTier(customer.tier);
   const { pending, error: sendError, send, markCompleted, cancel, reset } = useOutgoingCheckout();
 
   const [cart, setCart] = useState([]);

@@ -166,7 +166,7 @@ function ActivePromo() {
 
 export default function Dashboard() {
   const { user: authUser, refreshUser } = useAuth();
-  const { rewardRate } = useSettings();
+  const { rewardRate: defaultRate, rateForTier } = useSettings();
 
   // Pull latest profile on mount in case balance changed while away
   useEffect(() => { refreshUser?.(); }, []);
@@ -175,6 +175,7 @@ export default function Dashboard() {
   // Merge live stats (rewardsBalance, lifetime...) into the user object
   const liveStats = authUser ? get(authUser.id) : null;
   const currentUser = liveStats ? { ...authUser, ...liveStats } : authUser;
+  const rewardRate = currentUser ? rateForTier(currentUser.tier) : defaultRate;
   const { unreadCount } = useNotifications(currentUser?.id);
   const { challenges } = useChallenges(currentUser?.id);
   const recentOrders = getByUser(currentUser?.id)
