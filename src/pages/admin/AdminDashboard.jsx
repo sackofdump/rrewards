@@ -167,7 +167,7 @@ export default function AdminDashboard() {
               )}
             </div>
             <p className="text-xs text-neutral-500 mt-0.5">
-              {staffAnomalies > 0 ? 'Anomalies detected' : 'All clear'}
+              {staffAnomalies > 0 ? 'Anomalies detected' : 'No alerts'}
             </p>
           </div>
           <ChevronRight size={16} className="text-neutral-500 shrink-0" />

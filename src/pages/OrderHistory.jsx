@@ -1,17 +1,34 @@
+import { useState } from 'react';
 import { orders, restaurants } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
-import { Package, ChevronDown, ChevronUp, RotateCcw, Check } from 'lucide-react';
-import { useState } from 'react';
+import { useFavorites } from '../hooks/useFavorites';
+import { Package, ChevronDown, ChevronUp, Heart, Check } from 'lucide-react';
 
 function OrderCard({ order }) {
+  const { user } = useAuth();
+  const { hasFavorite, toggleFavorite, addMany } = useFavorites(user?.id);
   const [expanded, setExpanded] = useState(false);
-  const [reordered, setReordered] = useState(false);
+  const [addedCount, setAddedCount] = useState(null);
   const restaurant = restaurants.find(r => r.id === order.restaurantId);
 
-  function handleReorder(e) {
+  function handleAddAll(e) {
     e.stopPropagation();
-    setReordered(true);
-    setTimeout(() => setReordered(false), 2500);
+    const count = addMany(order.items.map(it => ({
+      restaurantId: order.restaurantId,
+      name: it.name,
+      price: it.price,
+    })));
+    setAddedCount(count);
+    setTimeout(() => setAddedCount(null), 2500);
+  }
+
+  function handleToggle(item, e) {
+    e.stopPropagation();
+    toggleFavorite({
+      restaurantId: order.restaurantId,
+      name: item.name,
+      price: item.price,
+    });
   }
 
   return (
@@ -42,14 +59,24 @@ function OrderCard({ order }) {
       {expanded && (
         <div className="px-4 pb-4 border-t border-white/5 pt-3">
           <p className="text-xs text-neutral-500 uppercase tracking-widest font-semibold mb-2">Items</p>
-          <ul className="space-y-1.5">
-            {order.items.map((item, i) => (
-              <li key={i} className="text-sm text-neutral-300 flex items-center gap-2">
-                <span className="w-1 h-1 rounded-full bg-amber-500 shrink-0" />
-                <span className="flex-1">{item.qty}× {item.name}</span>
-                <span className="text-neutral-500 text-xs">${(item.price * item.qty).toFixed(2)}</span>
-              </li>
-            ))}
+          <ul className="space-y-1">
+            {order.items.map((item, i) => {
+              const favorited = hasFavorite(order.restaurantId, item.name);
+              return (
+                <li key={i} className="text-sm text-neutral-300 flex items-center gap-2 py-0.5">
+                  <span className="w-1 h-1 rounded-full bg-amber-500 shrink-0" />
+                  <span className="flex-1">{item.qty}× {item.name}</span>
+                  <button onClick={e => handleToggle(item, e)}
+                    className={`p-1 rounded transition-colors ${
+                      favorited ? 'text-rose-400' : 'text-neutral-600 hover:text-rose-400'
+                    }`}
+                    title={favorited ? 'Remove from favorites' : 'Add to favorites'}>
+                    <Heart size={13} fill={favorited ? 'currentColor' : 'none'} />
+                  </button>
+                  <span className="text-neutral-500 text-xs w-14 text-right">${(item.price * item.qty).toFixed(2)}</span>
+                </li>
+              );
+            })}
           </ul>
           <div className="mt-3 pt-3 border-t border-white/5 flex justify-between text-xs text-neutral-500">
             <span>Order #{order.id}</span>
@@ -58,11 +85,11 @@ function OrderCard({ order }) {
             </span>
           </div>
 
-          <button onClick={handleReorder}
-            className="w-full mt-3 gradient-gold text-black font-bold py-2.5 rounded-xl text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-1.5">
-            {reordered
-              ? <><Check size={14} /> Saved for next visit</>
-              : <><RotateCcw size={14} /> Reorder</>
+          <button onClick={handleAddAll}
+            className="w-full mt-3 glass-gold border border-amber-500/30 text-amber-400 font-bold py-2.5 rounded-xl text-sm hover:brightness-110 transition-all flex items-center justify-center gap-1.5">
+            {addedCount !== null
+              ? <><Check size={14} /> {addedCount > 0 ? `Added ${addedCount} to favorites` : 'Already in favorites'}</>
+              : <><Heart size={14} /> Add all to favorites</>
             }
           </button>
         </div>

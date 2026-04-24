@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { restaurantDetails } from '../data/mockData';
 import { usePromotionsStore } from '../hooks/usePromotionsStore';
-import { MapPin, Phone, Clock, Star, ChevronRight, X, Percent } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { useFavorites } from '../hooks/useFavorites';
+import { MapPin, Phone, Clock, Star, ChevronRight, X, Percent, Heart, Trash2 } from 'lucide-react';
 
 function PromoChip({ promo }) {
   return (
@@ -15,7 +17,10 @@ function PromoChip({ promo }) {
 }
 
 function DetailSheet({ restaurant, onClose }) {
+  const { user } = useAuth();
   const { promos } = usePromotionsStore();
+  const { getByRestaurant, removeFavorite } = useFavorites(user?.id);
+  const favorites = getByRestaurant(restaurant.id);
   const promo = promos.find(p => p.restaurantId === restaurant.id && p.active);
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 backdrop-blur-sm"
@@ -43,7 +48,7 @@ function DetailSheet({ restaurant, onClose }) {
           {promo && <div className="mt-4"><PromoChip promo={promo} /></div>}
         </div>
 
-        <div className="px-6 py-5 space-y-4 pb-10">
+        <div className="px-6 py-5 space-y-4 pb-10 max-h-[60vh] overflow-y-auto">
           <p className="text-sm text-neutral-400 leading-relaxed">{restaurant.description}</p>
 
           <div className="space-y-3">
@@ -59,6 +64,35 @@ function DetailSheet({ restaurant, onClose }) {
             ))}
           </div>
 
+          {/* Favorites */}
+          <div className="pt-2">
+            <div className="flex items-center gap-2 mb-2">
+              <Heart size={13} className="text-rose-400" fill="currentColor" />
+              <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">
+                My Favorites ({favorites.length})
+              </p>
+            </div>
+            {favorites.length === 0 ? (
+              <div className="glass rounded-xl p-3 text-xs text-neutral-500 text-center">
+                No favorites here yet — tap the heart on items in your order history.
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {favorites.map(f => (
+                  <div key={f.id} className="group flex items-center gap-2 glass rounded-xl px-3 py-2">
+                    <Heart size={11} className="text-rose-400 shrink-0" fill="currentColor" />
+                    <span className="text-sm text-white flex-1 truncate">{f.name}</span>
+                    <span className="text-xs text-amber-400 font-semibold shrink-0">${f.price.toFixed(2)}</span>
+                    <button onClick={() => removeFavorite(f.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity text-neutral-600 hover:text-red-400 shrink-0 p-1">
+                      <Trash2 size={11} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <button className="w-full gradient-gold text-black font-bold py-3.5 rounded-xl text-sm hover:opacity-90 transition-opacity mt-2">
             Get Directions
           </button>
@@ -70,7 +104,10 @@ function DetailSheet({ restaurant, onClose }) {
 }
 
 function RestaurantCard({ restaurant, onClick }) {
+  const { user } = useAuth();
   const { promos } = usePromotionsStore();
+  const { getByRestaurant } = useFavorites(user?.id);
+  const favorites = getByRestaurant(restaurant.id);
   const promo = promos.find(p => p.restaurantId === restaurant.id && p.active);
   return (
     <button onClick={onClick}
@@ -86,6 +123,11 @@ function RestaurantCard({ restaurant, onClick }) {
             <Star size={11} className="text-amber-400 fill-amber-400" />
             <span className="text-xs font-semibold text-amber-400">{restaurant.rating}</span>
           </div>
+          {favorites.length > 0 && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-full px-2 py-0.5">
+              <Heart size={9} fill="currentColor" /> {favorites.length}
+            </span>
+          )}
           {promo && <PromoChip promo={promo} />}
         </div>
       </div>
