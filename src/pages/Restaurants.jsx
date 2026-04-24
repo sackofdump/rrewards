@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { restaurantDetails } from '../data/mockData';
 import { usePromotionsStore } from '../hooks/usePromotionsStore';
 import { MapPin, Phone, Clock, Star, ChevronRight, X, Percent } from 'lucide-react';
@@ -16,8 +17,8 @@ function PromoChip({ promo }) {
 function DetailSheet({ restaurant, onClose }) {
   const { promos } = usePromotionsStore();
   const promo = promos.find(p => p.restaurantId === restaurant.id && p.active);
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm"
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 backdrop-blur-sm"
       onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="w-full max-w-lg bg-[#0f0f18] border border-white/8 rounded-t-3xl overflow-hidden">
         {/* Header */}
@@ -63,7 +64,8 @@ function DetailSheet({ restaurant, onClose }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

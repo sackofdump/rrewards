@@ -4,7 +4,8 @@ import { adminCustomers, restaurants, tierConfig } from '../../data/mockData';
 import { useMenuStore } from '../../hooks/useMenuStore';
 import { useSettings } from '../../context/SettingsContext';
 import { exportCustomersCSV, exportOrdersCSV } from '../../utils/generateCSV';
-import { Search, Users, TrendingUp, DollarSign, ChevronRight, Shield, UtensilsCrossed, Download, Flame, Settings as SettingsIcon, BarChart3, FileSpreadsheet, Target } from 'lucide-react';
+import { useActivityLog } from '../../hooks/useActivityLog';
+import { Search, Users, TrendingUp, DollarSign, ChevronRight, Shield, UtensilsCrossed, Download, Flame, Settings as SettingsIcon, BarChart3, FileSpreadsheet, Target, ShieldAlert } from 'lucide-react';
 
 function StatCard({ icon: Icon, label, value, sub }) {
   return (
@@ -50,6 +51,8 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState('');
   const { items: menuItems } = useMenuStore();
   const { rewardRate } = useSettings();
+  const { entries } = useActivityLog();
+  const staffAnomalies = entries.filter(e => e.actorRole === 'staff' && e.anomaly).length;
 
   const [downloading, setDownloading] = useState(false);
 
@@ -78,9 +81,9 @@ export default function AdminDashboard() {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Shield size={14} className="text-amber-400" />
-            <p className="text-xs text-amber-400 uppercase tracking-widest font-bold">Admin Panel</p>
+            <p className="text-xs text-amber-400 uppercase tracking-widest font-bold">Manager Panel</p>
           </div>
-          <h1 className="text-2xl font-bold text-white">Rewards</h1>
+          <h1 className="text-2xl font-bold text-white">Restaurant Rewards</h1>
         </div>
         <Link to="/" className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors">
           ← Customer View
@@ -139,6 +142,33 @@ export default function AdminDashboard() {
           <div className="flex-1 text-left min-w-0">
             <p className="text-sm font-bold text-white">Analytics</p>
             <p className="text-xs text-neutral-500 mt-0.5">Charts & trends</p>
+          </div>
+          <ChevronRight size={16} className="text-neutral-500 shrink-0" />
+        </Link>
+
+        <Link to="/admin/activity"
+          className={`glass rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition-all ${
+            staffAnomalies > 0 ? 'border-red-500/30 bg-red-500/[0.03]' : ''
+          }`}>
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+            staffAnomalies > 0
+              ? 'bg-red-500/15 border border-red-500/30'
+              : 'bg-green-500/10 border border-green-500/25'
+          }`}>
+            <ShieldAlert size={18} className={staffAnomalies > 0 ? 'text-red-400' : 'text-green-400'} />
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-bold text-white">Activity Log</p>
+              {staffAnomalies > 0 && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-300">
+                  {staffAnomalies}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-neutral-500 mt-0.5">
+              {staffAnomalies > 0 ? 'Anomalies detected' : 'All clear'}
+            </p>
           </div>
           <ChevronRight size={16} className="text-neutral-500 shrink-0" />
         </Link>

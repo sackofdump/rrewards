@@ -132,7 +132,7 @@ export default function ChallengesAdmin() {
         <div>
           <div className="flex items-center gap-2">
             <Shield size={12} className="text-amber-400" />
-            <p className="text-xs text-amber-400 uppercase tracking-widest font-bold">Admin</p>
+            <p className="text-xs text-amber-400 uppercase tracking-widest font-bold">Manager</p>
           </div>
           <h1 className="text-xl font-bold text-white leading-tight">Challenges</h1>
         </div>

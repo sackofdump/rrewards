@@ -3,7 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import { adminCustomers, restaurants, orders, tierConfig } from '../../data/mockData';
 import { useSettings } from '../../context/SettingsContext';
 import { createPortal } from 'react-dom';
+import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../hooks/useNotifications';
+import { useActivityLog } from '../../hooks/useActivityLog';
 import {
   ArrowLeft, Mail, Phone, Calendar, Plus, Minus, Check, Edit2, Ban, RefreshCw,
   ChevronDown, ChevronUp, Receipt, Clock, Star, User as UserIcon, Send, X, MessageSquare
@@ -157,8 +159,10 @@ function MessageModal({ customer, onClose, onSend }) {
 
 export default function CustomerDetail() {
   const { id } = useParams();
+  const { user: actor } = useAuth();
   const { rewardRate } = useSettings();
   const { addNotification } = useNotifications();
+  const { logAction } = useActivityLog();
   const [customer, setCustomer] = useState(adminCustomers.find(c => c.id === id));
   const [adjustAmount, setAdjustAmount] = useState('');
   const [adjustNote, setAdjustNote]     = useState('');
@@ -169,6 +173,16 @@ export default function CustomerDetail() {
 
   function handleSendMessage({ title, body }) {
     addNotification({ userId: customer.id, type: 'message', title, body });
+    logAction({
+      actorId: actor?.id ?? 'unknown',
+      actorName: actor?.name ?? 'Manager',
+      actorRole: 'admin',
+      action: 'customer.message',
+      targetId: customer.id,
+      targetName: customer.name,
+      amount: null,
+      details: { title },
+    });
     setMessageSent(true);
     setTimeout(() => setMessageSent(false), 2500);
   }
@@ -199,16 +213,38 @@ export default function CustomerDetail() {
   function handleAdjust(dir) {
     const amt = parseFloat(adjustAmount);
     if (!amt || isNaN(amt)) return;
+    const delta = dir === 'add' ? amt : -amt;
     setCustomer(c => ({
       ...c,
-      rewardsBalance: Math.max(0, c.rewardsBalance + (dir === 'add' ? amt : -amt))
+      rewardsBalance: Math.max(0, c.rewardsBalance + delta)
     }));
+    logAction({
+      actorId: actor?.id ?? 'unknown',
+      actorName: actor?.name ?? 'Manager',
+      actorRole: 'admin',
+      action: 'customer.adjust',
+      targetId: customer.id,
+      targetName: customer.name,
+      amount: delta,
+      details: { direction: dir, note: adjustNote || null, previousBalance: customer.rewardsBalance },
+    });
     setAdjustAmount(''); setAdjustNote('');
     setAdjustSuccess(true);
     setTimeout(() => setAdjustSuccess(false), 2000);
   }
   function toggleStatus() {
-    setCustomer(c => ({ ...c, status: c.status === 'active' ? 'inactive' : 'active' }));
+    const nextStatus = customer.status === 'active' ? 'inactive' : 'active';
+    setCustomer(c => ({ ...c, status: nextStatus }));
+    logAction({
+      actorId: actor?.id ?? 'unknown',
+      actorName: actor?.name ?? 'Manager',
+      actorRole: 'admin',
+      action: nextStatus === 'inactive' ? 'customer.deactivate' : 'customer.activate',
+      targetId: customer.id,
+      targetName: customer.name,
+      amount: null,
+      details: { newStatus: nextStatus },
+    });
   }
 
   return (

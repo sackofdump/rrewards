@@ -130,7 +130,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-between mb-6 pt-4">
         <div>
           <p className="text-xs text-neutral-500 uppercase tracking-widest font-medium">Restaurant Group</p>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Rewards</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Restaurant Rewards</h1>
         </div>
         <div className="flex items-center gap-2">
           <Link to="/notifications"

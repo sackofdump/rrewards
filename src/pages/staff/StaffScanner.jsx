@@ -3,6 +3,7 @@ import { adminCustomers, restaurants, tierConfig, MENU_CATEGORIES } from '../../
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
 import { useMenuStore } from '../../hooks/useMenuStore';
+import { useActivityLog } from '../../hooks/useActivityLog';
 import {
   ScanLine, XCircle, LogOut, ChevronRight,
   CheckCircle, ArrowLeft, Star, Gift, Receipt,
@@ -375,6 +376,7 @@ function ReceiptStep({ customer, tx, onNext }) {
 export default function StaffScanner() {
   const { user, logout } = useAuth();
   const [step, setStep]           = useState('scan');   // 'scan' | 'checkout' | 'receipt'
+  const { logAction } = useActivityLog();
   const [customer, setCustomer]   = useState(null);
   const [notFound, setNotFound]   = useState(false);
   const [restaurant, setRestaurant] = useState(restaurants[0].id);
@@ -386,6 +388,22 @@ export default function StaffScanner() {
   }
 
   function handleComplete(txData) {
+    logAction({
+      actorId: user?.id ?? 'unknown',
+      actorName: user?.name ?? 'Unknown Staff',
+      actorRole: 'staff',
+      action: 'reward.apply',
+      targetId: customer.id,
+      targetName: customer.name,
+      amount: txData.earned,
+      details: {
+        orderTotal: txData.total,
+        subtotal: txData.subtotal,
+        rewardAmount: txData.earned,
+        redeemed: txData.redeemAmt,
+        restaurantId: restaurant,
+      },
+    });
     setTx(txData);
     setStep('receipt');
   }

@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useRestaurantStore } from '../../hooks/useRestaurantStore';
+import { useActivityLog } from '../../hooks/useActivityLog';
+import { adminCustomers, staffAccounts } from '../../data/mockData';
 import {
   Terminal, LogOut, Plus, Edit2, Trash2, X,
-  Lock, RotateCcw, Store, Star
+  Lock, RotateCcw, Store, Star, ShieldAlert, ChevronRight,
+  UserCog, Bomb, Eye
 } from 'lucide-react';
 
 const CUISINE_SUGGESTIONS = [
@@ -117,11 +120,38 @@ function RestaurantModal({ restaurant, onSave, onClose }) {
 }
 
 export default function DevAdmin() {
-  const { user, logout } = useAuth();
+  const { user, logout, login } = useAuth();
   const { all, addRestaurant, updateRestaurant, removeRestaurant, resetAll, overrides } = useRestaurantStore();
+  const { entries } = useActivityLog();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [showImpersonate, setShowImpersonate] = useState(false);
+
+  const adminAlerts = entries.filter(e => e.actorRole === 'admin' && e.anomaly).length;
+
+  function handleNukeData() {
+    if (!confirm('NUKE ALL DATA? This wipes every localStorage entry — customers, menu, promos, settings, activity, notifications. Are you sure?')) return;
+    if (!confirm('Really sure? This cannot be undone.')) return;
+    Object.keys(localStorage)
+      .filter(k => k.startsWith('rr_'))
+      .forEach(k => localStorage.removeItem(k));
+    window.location.reload();
+  }
+
+  function handleImpersonate(role, targetUser) {
+    if (!confirm(`Impersonate ${targetUser.name} (${role})? You'll be logged out of dev.`)) return;
+    // Password varies by role; we bypass with the known demo credentials
+    const creds = {
+      customer: { email: targetUser.email, password: 'password123' },
+      staff:    { email: targetUser.email, password: 'staff123'    },
+    }[role];
+    login(creds.email, creds.password, role)
+      .then(() => {
+        navigate(role === 'customer' ? '/' : '/staff');
+      })
+      .catch(() => alert('Could not impersonate'));
+  }
 
   function signOut() {
     logout();
@@ -169,8 +199,48 @@ export default function DevAdmin() {
         <Lock size={14} className="text-violet-400 shrink-0 mt-0.5" />
         <p className="text-xs text-neutral-300 leading-relaxed">
           This is the <span className="text-violet-400 font-semibold">dev-only</span> area.
-          Changes here affect the restaurant list across the whole app.
+          Changes here affect the app for everyone.
         </p>
+      </div>
+
+      {/* Dev nav cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+        <Link to="/dev-admin/alerts"
+          className={`glass rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition-all ${
+            adminAlerts > 0 ? 'border-red-500/30 bg-red-500/[0.03]' : ''
+          }`}>
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
+            adminAlerts > 0
+              ? 'bg-red-500/15 border border-red-500/30'
+              : 'bg-violet-500/15 border border-violet-400/25'
+          }`}>
+            <ShieldAlert size={18} className={adminAlerts > 0 ? 'text-red-400' : 'text-violet-400'} />
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-bold text-white">Security Alerts</p>
+              {adminAlerts > 0 && (
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-500/20 text-red-300">
+                  {adminAlerts}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-neutral-500 mt-0.5">Admin anomalies</p>
+          </div>
+          <ChevronRight size={16} className="text-neutral-500 shrink-0" />
+        </Link>
+
+        <button onClick={() => setShowImpersonate(true)}
+          className="glass rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition-all text-left">
+          <div className="w-11 h-11 rounded-xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center shrink-0">
+            <Eye size={18} className="text-blue-400" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-white">Impersonate</p>
+            <p className="text-xs text-neutral-500 mt-0.5">Log in as customer or staff</p>
+          </div>
+          <ChevronRight size={16} className="text-neutral-500 shrink-0" />
+        </button>
       </div>
 
       {/* Stats */}
@@ -231,10 +301,15 @@ export default function DevAdmin() {
 
       {(all.some(r => !r.isBuiltIn) || Object.keys(overrides).length > 0) && (
         <button onClick={() => { if (confirm('Undo all dev edits and remove custom restaurants? Built-in demos will revert to their defaults.')) resetAll(); }}
-          className="w-full mt-8 text-xs text-neutral-600 hover:text-red-400 transition-colors flex items-center justify-center gap-1.5 py-2">
-          <RotateCcw size={11} /> Reset all changes
+          className="w-full mt-6 text-xs text-neutral-600 hover:text-red-400 transition-colors flex items-center justify-center gap-1.5 py-2">
+          <RotateCcw size={11} /> Reset restaurant changes
         </button>
       )}
+
+      <button onClick={handleNukeData}
+        className="w-full mt-2 text-xs text-red-500/70 hover:text-red-400 transition-colors flex items-center justify-center gap-1.5 py-2">
+        <Bomb size={11} /> Nuke ALL demo data (customers, menu, activity, etc)
+      </button>
 
       {showAdd && (
         <RestaurantModal
@@ -248,6 +323,58 @@ export default function DevAdmin() {
           onSave={handleSave}
           onClose={() => setEditing(null)}
         />
+      )}
+      {showImpersonate && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={e => e.target === e.currentTarget && setShowImpersonate(false)}>
+          <div className="w-full max-w-lg bg-[#0f0f18] border border-white/8 rounded-t-3xl sm:rounded-3xl max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b border-white/5 shrink-0">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Eye size={16} className="text-violet-400" /> Impersonate
+              </h2>
+              <button onClick={() => setShowImpersonate(false)} className="text-neutral-500 hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2">Staff Accounts</p>
+                <div className="space-y-2">
+                  {staffAccounts.map(s => (
+                    <button key={s.id} onClick={() => handleImpersonate('staff', s)}
+                      className="w-full flex items-center gap-3 glass rounded-xl p-3 hover:bg-white/5 transition-colors text-left">
+                      <div className="w-9 h-9 rounded-full bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-400 font-bold text-xs">
+                        {s.name.split(' ').map(n => n[0]).join('')}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white font-semibold">{s.name}</p>
+                        <p className="text-xs text-neutral-500">{s.email}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2">Customers</p>
+                <div className="space-y-2">
+                  {adminCustomers.filter(c => c.status === 'active').map(c => (
+                    <button key={c.id} onClick={() => handleImpersonate('customer', c)}
+                      className="w-full flex items-center gap-3 glass rounded-xl p-3 hover:bg-white/5 transition-colors text-left">
+                      <div className="w-9 h-9 rounded-full gradient-gold flex items-center justify-center text-black font-bold text-xs">
+                        {c.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white font-semibold">{c.name}</p>
+                        <p className="text-xs text-neutral-500">{c.tier} · {c.email}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

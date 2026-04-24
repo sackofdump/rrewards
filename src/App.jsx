@@ -19,9 +19,11 @@ import MenuManagement from './pages/admin/MenuManagement';
 import Settings from './pages/admin/Settings';
 import PromotionsAdmin from './pages/admin/PromotionsAdmin';
 import ChallengesAdmin from './pages/admin/ChallengesAdmin';
+import Activity from './pages/admin/Activity';
 const Analytics = lazy(() => import('./pages/admin/Analytics'));
 import DevLogin from './pages/dev/DevLogin';
 import DevAdmin from './pages/dev/DevAdmin';
+import DevAlerts from './pages/dev/DevAlerts';
 import StaffScanner from './pages/staff/StaffScanner';
 
 function MobileShell({ children }) {
@@ -65,6 +67,7 @@ function AdminApp() {
             <Route path="/admin/settings"      element={<Settings />} />
             <Route path="/admin/promotions"    element={<PromotionsAdmin />} />
             <Route path="/admin/challenges"    element={<ChallengesAdmin />} />
+            <Route path="/admin/activity"      element={<Activity />} />
             <Route path="/admin/analytics" element={
               <Suspense fallback={<div className="p-8 text-center text-neutral-500 text-sm">Loading charts…</div>}>
                 <Analytics />
@@ -98,7 +101,8 @@ function DevAdminApp() {
       <MobileShell>
         <div className="flex-1">
           <Routes>
-            <Route path="/dev-admin" element={<DevAdmin />} />
+            <Route path="/dev-admin"        element={<DevAdmin />} />
+            <Route path="/dev-admin/alerts" element={<DevAlerts />} />
           </Routes>
         </div>
       </MobileShell>

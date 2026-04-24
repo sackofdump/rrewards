@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
+import { useActivityLog } from '../../hooks/useActivityLog';
 import {
   ArrowLeft, Shield, Percent, Receipt, Check,
   RotateCcw, TrendingUp, Users, Cake, DollarSign
@@ -21,6 +23,8 @@ function RatePreset({ label, value, current, onSelect }) {
 }
 
 export default function Settings() {
+  const { user: actor } = useAuth();
+  const { logAction } = useActivityLog();
   const { rewardRate, taxRate, referralBonus, birthdayBonus, update, reset } = useSettings();
   const [rewardInput, setRewardInput] = useState((rewardRate * 100).toString());
   const [taxInput, setTaxInput]       = useState((taxRate * 100).toString());
@@ -34,11 +38,24 @@ export default function Settings() {
     const ref = parseFloat(referralInput);
     const bd  = parseFloat(birthdayInput);
     const patch = {};
-    if (!isNaN(r)   && r   >= 0 && r   <= 100)  patch.rewardRate    = r / 100;
-    if (!isNaN(t)   && t   >= 0 && t   <= 100)  patch.taxRate       = t / 100;
-    if (!isNaN(ref) && ref >= 0)                patch.referralBonus = ref;
-    if (!isNaN(bd)  && bd  >= 0)                patch.birthdayBonus = bd;
+    const changes = [];
+    if (!isNaN(r)   && r   >= 0 && r   <= 100 && r / 100 !== rewardRate) { patch.rewardRate    = r / 100; changes.push({ key: 'rewardRate',    oldValue: rewardRate,    newValue: r / 100 }); }
+    if (!isNaN(t)   && t   >= 0 && t   <= 100 && t / 100 !== taxRate)    { patch.taxRate       = t / 100; changes.push({ key: 'taxRate',       oldValue: taxRate,       newValue: t / 100 }); }
+    if (!isNaN(ref) && ref >= 0 && ref !== referralBonus)                { patch.referralBonus = ref;     changes.push({ key: 'referralBonus', oldValue: referralBonus, newValue: ref }); }
+    if (!isNaN(bd)  && bd  >= 0 && bd  !== birthdayBonus)                { patch.birthdayBonus = bd;      changes.push({ key: 'birthdayBonus', oldValue: birthdayBonus, newValue: bd }); }
     update(patch);
+    changes.forEach(change => {
+      logAction({
+        actorId: actor?.id ?? 'unknown',
+        actorName: actor?.name ?? 'Manager',
+        actorRole: 'admin',
+        action: 'settings.update',
+        targetId: null,
+        targetName: null,
+        amount: null,
+        details: change,
+      });
+    });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
@@ -71,7 +88,7 @@ export default function Settings() {
         <div>
           <div className="flex items-center gap-2">
             <Shield size={12} className="text-amber-400" />
-            <p className="text-xs text-amber-400 uppercase tracking-widest font-bold">Admin</p>
+            <p className="text-xs text-amber-400 uppercase tracking-widest font-bold">Manager</p>
           </div>
           <h1 className="text-xl font-bold text-white leading-tight">Settings</h1>
         </div>

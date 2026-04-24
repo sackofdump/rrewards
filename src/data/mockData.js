@@ -281,7 +281,7 @@ export const staffAccounts = [
 ];
 
 export const adminAccount = {
-  id: 'a001', name: 'Admin', email: 'admin@rewards.com', role: 'admin', password: 'admin123',
+  id: 'a001', name: 'Manager', email: 'admin@rewards.com', role: 'admin', password: 'admin123',
 };
 
 export const devAdminAccount = {
