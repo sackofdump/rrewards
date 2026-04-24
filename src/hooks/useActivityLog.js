@@ -172,6 +172,7 @@ export function useActivityLog() {
     const baseEntry = {
       id: Date.now() + Math.floor(Math.random() * 1000),
       createdAt: new Date().toISOString(),
+      read: false,
       ...data,
     };
     const anomaly = detectAnomaly(baseEntry, next);
@@ -181,17 +182,51 @@ export function useActivityLog() {
     notify();
   }, []);
 
-  const clearLog = useCallback(() => {
-    save([]);
+  const markRead = useCallback((id) => {
+    const next = load().map(e => e.id === id ? { ...e, read: true } : e);
+    save(next);
     notify();
   }, []);
 
-  const resetLog = useCallback(() => {
-    save(DEFAULT_LOG);
+  const markAllRead = useCallback(() => {
+    const next = load().map(e => e.anomaly ? { ...e, read: true } : e);
+    save(next);
     notify();
   }, []);
 
-  return { entries, logAction, clearLog, resetLog };
+  return { entries, logAction, markRead, markAllRead };
+}
+
+/* Mark an entry as read across either environment (dev needs this since
+   its alerts can come from either demo or live storage). */
+function markReadAcrossEnvs(id) {
+  ['', '_live'].forEach(suffix => {
+    const key = `${BASE_KEY}${suffix}`;
+    try {
+      const stored = localStorage.getItem(key);
+      if (!stored) return;
+      const list = JSON.parse(stored);
+      let changed = false;
+      const next = list.map(e => {
+        if (e.id === id && !e.read) { changed = true; return { ...e, read: true }; }
+        return e;
+      });
+      if (changed) localStorage.setItem(key, JSON.stringify(next));
+    } catch { /* ignore */ }
+  });
+}
+
+function markAllReadAcrossEnvs() {
+  ['', '_live'].forEach(suffix => {
+    const key = `${BASE_KEY}${suffix}`;
+    try {
+      const stored = localStorage.getItem(key);
+      if (!stored) return;
+      const list = JSON.parse(stored);
+      const next = list.map(e => e.anomaly ? { ...e, read: true } : e);
+      localStorage.setItem(key, JSON.stringify(next));
+    } catch { /* ignore */ }
+  });
 }
 
 /* Hook for dev — returns entries from BOTH demo and live environments,
@@ -205,13 +240,15 @@ export function useAllActivityLogs() {
     return () => { listeners = listeners.filter(l => l !== onChange); };
   }, []);
 
-  function clearBoth() {
-    try {
-      localStorage.removeItem(BASE_KEY);
-      localStorage.removeItem(`${BASE_KEY}_live`);
-    } catch { /* ignore */ }
+  function markRead(id) {
+    markReadAcrossEnvs(id);
     notify();
   }
 
-  return { entries, clearBoth };
+  function markAllRead() {
+    markAllReadAcrossEnvs();
+    notify();
+  }
+
+  return { entries, markRead, markAllRead };
 }

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useActivityLog } from '../../hooks/useActivityLog';
 import {
   ArrowLeft, Shield, AlertTriangle, AlertOctagon, Activity as ActivityIcon,
-  ShieldAlert, User, Filter
+  ShieldAlert, User, Filter, Check, CheckCheck
 } from 'lucide-react';
 
 const ACTION_LABELS = {
@@ -42,13 +42,15 @@ function formatWhen(iso) {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
-function LogRow({ entry }) {
+function LogRow({ entry, onMarkRead }) {
   const label = ACTION_LABELS[entry.action] ?? entry.action;
   const isStaff = entry.actorRole === 'staff';
   const anomaly = entry.anomaly;
+  const isRead = Boolean(entry.read);
+  const showMarkRead = anomaly && !isRead && onMarkRead;
 
   return (
-    <div className={`glass rounded-xl p-4 ${anomaly
+    <div className={`glass rounded-xl p-4 transition-opacity ${isRead && anomaly ? 'opacity-55' : ''} ${anomaly
       ? anomaly.level === 'critical' ? 'border-red-500/30 bg-red-500/[0.03]' : 'border-amber-500/25 bg-amber-500/[0.03]'
       : ''}`}>
       <div className="flex items-start gap-3">
@@ -65,8 +67,13 @@ function LogRow({ entry }) {
                 ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
                 : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
             }`}>
-              {entry.actorRole}
+              {entry.actorRole === 'admin' ? 'manager' : entry.actorRole}
             </span>
+            {isRead && anomaly && (
+              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-neutral-700/50 text-neutral-400 flex items-center gap-0.5">
+                <Check size={9} /> Reviewed
+              </span>
+            )}
           </div>
           <p className="text-sm text-neutral-300">{label}
             {entry.targetName && (
@@ -84,7 +91,13 @@ function LogRow({ entry }) {
             return (
               <div className={`mt-2 flex items-start gap-2 rounded-lg px-3 py-2 ${meta.bg} border ${meta.border}`}>
                 <Icon size={12} className={`${meta.color} shrink-0 mt-0.5`} />
-                <p className={`text-[11px] font-semibold ${meta.color}`}>{anomaly.reason}</p>
+                <p className={`text-[11px] font-semibold ${meta.color} flex-1`}>{anomaly.reason}</p>
+                {showMarkRead && (
+                  <button onClick={() => onMarkRead(entry.id)}
+                    className="shrink-0 px-2 py-0.5 rounded bg-white/8 hover:bg-white/15 text-[10px] font-semibold text-white flex items-center gap-1">
+                    <Check size={9} /> Mark read
+                  </button>
+                )}
               </div>
             );
           })()}
@@ -95,7 +108,7 @@ function LogRow({ entry }) {
 }
 
 export default function Activity() {
-  const { entries } = useActivityLog();
+  const { entries, markRead, markAllRead } = useActivityLog();
   const [roleFilter, setRoleFilter] = useState('all'); // 'all' | 'staff' | 'admin'
   const [onlyFlagged, setOnlyFlagged] = useState(false);
 
@@ -109,6 +122,7 @@ export default function Activity() {
   }, [entries, roleFilter, onlyFlagged]);
 
   const flaggedCount = entries.filter(e => e.anomaly && e.actorRole === 'staff').length;
+  const unreadFlaggedCount = entries.filter(e => e.anomaly && e.actorRole === 'staff' && !e.read).length;
 
   return (
     <div className="px-4 pt-6 pb-10 max-w-2xl mx-auto">
@@ -128,10 +142,17 @@ export default function Activity() {
       {flaggedCount > 0 && (
         <div className="rounded-xl bg-red-500/8 border border-red-500/25 px-4 py-3 mb-4 flex items-start gap-2.5">
           <ShieldAlert size={15} className="text-red-400 shrink-0 mt-0.5" />
-          <p className="text-xs text-neutral-200 leading-relaxed">
-            <span className="text-red-400 font-bold">{flaggedCount} staff anomal{flaggedCount === 1 ? 'y' : 'ies'}</span> detected.
-            Review below — large rewards, high reward ratios, and rapid activity are flagged automatically.
-          </p>
+          <div className="flex-1 text-xs text-neutral-200 leading-relaxed">
+            <span className="text-red-400 font-bold">{flaggedCount} staff anomal{flaggedCount === 1 ? 'y' : 'ies'}</span>
+            {unreadFlaggedCount > 0 && <> · <span className="text-white font-semibold">{unreadFlaggedCount} new</span></>} detected.
+            Review below — anomalies cannot be deleted but can be marked as reviewed.
+          </div>
+          {unreadFlaggedCount > 0 && (
+            <button onClick={markAllRead}
+              className="shrink-0 px-2.5 py-1 rounded-lg bg-white/8 hover:bg-white/15 text-[11px] font-semibold text-white flex items-center gap-1">
+              <CheckCheck size={11} /> Mark all read
+            </button>
+          )}
         </div>
       )}
 
@@ -167,7 +188,7 @@ export default function Activity() {
         </div>
       ) : (
         <div className="space-y-2">
-          {visibleEntries.map(e => <LogRow key={e.id} entry={e} />)}
+          {visibleEntries.map(e => <LogRow key={e.id} entry={e} onMarkRead={markRead} />)}
         </div>
       )}
     </div>
