@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useRestaurantStore } from '../../hooks/useRestaurantStore';
-import { useActivityLog } from '../../hooks/useActivityLog';
+import { useAllActivityLogs } from '../../hooks/useActivityLog';
 import { adminCustomers, staffAccounts } from '../../data/mockData';
 import {
   Terminal, LogOut, Plus, Edit2, Trash2, X,
@@ -122,7 +122,7 @@ function RestaurantModal({ restaurant, onSave, onClose }) {
 export default function DevAdmin() {
   const { user, logout, login } = useAuth();
   const { all, addRestaurant, updateRestaurant, removeRestaurant, resetAll, overrides } = useRestaurantStore();
-  const { entries } = useActivityLog();
+  const { entries } = useAllActivityLogs();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(null);
   const [showAdd, setShowAdd] = useState(false);

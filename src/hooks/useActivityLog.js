@@ -34,6 +34,28 @@ function save(items) {
   catch { /* ignore */ }
 }
 
+// Dev admin needs visibility into BOTH environments.
+function loadBothEnvs() {
+  const demo = (() => {
+    try {
+      const stored = localStorage.getItem(BASE_KEY);
+      return stored ? JSON.parse(stored) : DEFAULT_LOG;
+    } catch { return DEFAULT_LOG; }
+  })();
+  const live = (() => {
+    try {
+      const stored = localStorage.getItem(`${BASE_KEY}_live`);
+      return stored ? JSON.parse(stored) : [];
+    } catch { return []; }
+  })();
+  // Tag entries with the environment they came from
+  const tagged = [
+    ...demo.map(e => ({ ...e, env: 'demo' })),
+    ...live.map(e => ({ ...e, env: 'live' })),
+  ];
+  return tagged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
 /* ── Anomaly detection ───────────────────────────────────────────── */
 function detectAnomaly(entry, recentEntries) {
   const oneHourMs = 60 * 60 * 1000;
@@ -75,10 +97,14 @@ function detectAnomaly(entry, recentEntries) {
 
   if (entry.action === 'customer.adjust') {
     const amt = Math.abs(entry.amount ?? 0);
-    if (amt > 100) {
+    // Tighter thresholds — any meaningful manual grant is worth surfacing
+    if (amt >= 100) {
       return { level: 'critical', reason: `Large manual balance adjustment: $${amt.toFixed(2)}` };
     }
-    if (amt > 25) {
+    if (amt >= 50) {
+      return { level: 'warning', reason: `Sizeable manual adjustment: $${amt.toFixed(2)}` };
+    }
+    if (amt >= 20) {
       return { level: 'warning', reason: `Manual adjustment: $${amt.toFixed(2)}` };
     }
     const recentAdjusts = recentEntries.filter(e =>
@@ -162,4 +188,26 @@ export function useActivityLog() {
   }, []);
 
   return { entries, logAction, clearLog, resetLog };
+}
+
+/* Hook for dev — returns entries from BOTH demo and live environments,
+   tagged with { env: 'demo' | 'live' }. */
+export function useAllActivityLogs() {
+  const [entries, setEntries] = useState(loadBothEnvs);
+
+  useEffect(() => {
+    function onChange() { setEntries(loadBothEnvs()); }
+    listeners.push(onChange);
+    return () => { listeners = listeners.filter(l => l !== onChange); };
+  }, []);
+
+  function clearBoth() {
+    try {
+      localStorage.removeItem(BASE_KEY);
+      localStorage.removeItem(`${BASE_KEY}_live`);
+    } catch { /* ignore */ }
+    notify();
+  }
+
+  return { entries, clearBoth };
 }

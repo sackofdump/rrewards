@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useActivityLog } from '../../hooks/useActivityLog';
+import { useAllActivityLogs } from '../../hooks/useActivityLog';
 import {
   Terminal, LogOut, AlertOctagon, AlertTriangle, ShieldAlert,
   User, Trash2, ActivityIcon, Sparkles
@@ -59,8 +59,17 @@ function AlertCard({ entry }) {
                 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                 : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
             }`}>
-              {entry.actorRole}
+              {entry.actorRole === 'admin' ? 'manager' : entry.actorRole}
             </span>
+            {entry.env && (
+              <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                entry.env === 'live'
+                  ? 'bg-green-500/15 text-green-400 border border-green-500/25'
+                  : 'bg-neutral-700/50 text-neutral-400 border border-neutral-600'
+              }`}>
+                {entry.env}
+              </span>
+            )}
             <span className="text-xs text-neutral-400">{entry.actorName}</span>
           </div>
           <p className="text-sm text-white font-semibold">{entry.anomaly.reason}</p>
@@ -92,7 +101,7 @@ function QuietRow({ entry }) {
 export default function DevAlerts() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { entries, clearLog } = useActivityLog();
+  const { entries, clearBoth } = useAllActivityLogs();
 
   const adminAlerts = useMemo(() =>
     entries.filter(e => e.actorRole === 'admin' && e.anomaly),
@@ -113,7 +122,7 @@ export default function DevAlerts() {
   }
 
   function handleClear() {
-    if (confirm('Clear the entire activity log? This wipes all audit history.')) clearLog();
+    if (confirm('Clear the entire activity log across BOTH demo and live environments? This wipes all audit history.')) clearBoth();
   }
 
   return (
